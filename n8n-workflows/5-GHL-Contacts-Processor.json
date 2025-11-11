@@ -41,13 +41,12 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"contacts_get-contacts\",\n  \"params\": {\n    \"locationId\": \"{{ $env.GHL_LOCATION_ID }}\",\n    \"limit\": 1000{{ $json.query.search ? ',\\n    \"query\": \"' + $json.query.search + '\"' : '' }}{{ $json.query.role === 'broker' ? ',\\n    \"assignedTo\": \"' + $json.query.userId + '\"' : '' }}\n  }\n}",
-        "options": {}
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"contacts_get-contacts\",\n  \"params\": {\n    \"locationId\": \"{{ $env.GHL_LOCATION_ID }}\",\n    \"limit\": 1000{{ $json.query.search ? ',\\n    \"query\": \"' + $json.query.search + '\"' : '' }}{{ $json.query.role === 'broker' ? ',\\n    \"assignedTo\": \"' + $json.query.userId + '\"' : '' }}\n  }\n}"
       },
       "id": "ghl-get-contacts",
       "name": "GHL - Get Contacts",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "typeVersion": 4,
       "position": [440, 300]
     },
     {
@@ -82,13 +81,12 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 2,\n  \"method\": \"opportunities_search-opportunity\",\n  \"params\": {\n    \"locationId\": \"{{ $env.GHL_LOCATION_ID }}\"{{ $json.query.role === 'broker' ? ',\\n    \"assignedTo\": \"' + $json.query.userId + '\"' : '' }}\n  }\n}",
-        "options": {}
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 2,\n  \"method\": \"opportunities_search-opportunity\",\n  \"params\": {\n    \"locationId\": \"{{ $env.GHL_LOCATION_ID }}\"{{ $json.query.role === 'broker' ? ',\\n    \"assignedTo\": \"' + $json.query.userId + '\"' : '' }}\n  }\n}"
       },
       "id": "ghl-get-opportunities",
       "name": "GHL - Get Opportunities",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "typeVersion": 4,
       "position": [440, 450]
     },
     {
@@ -146,10 +144,5 @@
     "executionOrder": "v1"
   },
   "staticData": null,
-  "tags": [
-    {
-      "name": "Selvadentro",
-      "id": "selvadentro-ghl"
-    }
-  ]
+  "tags": []
 }

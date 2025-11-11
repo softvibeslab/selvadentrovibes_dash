@@ -41,14 +41,13 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"contacts_get-contacts\",\n  \"params\": {\n    \"locationId\": \"{{ $env.GHL_LOCATION_ID }}\",\n    \"limit\": 1000{{ $json.query.role === 'broker' ? ',\\n    \"assignedTo\": \"' + $json.query.userId + '\"' : '' }}\n  }\n}",
-        "options": {}
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"contacts_get-contacts\",\n  \"params\": {\n    \"locationId\": \"{{ $env.GHL_LOCATION_ID }}\",\n    \"limit\": 1000{{ $json.query.role === 'broker' ? ',\\n    \"assignedTo\": \"' + $json.query.userId + '\"' : '' }}\n  }\n}"
       },
       "id": "ghl-get-contacts",
       "name": "GHL - Get Contacts",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [440, 300]
+      "typeVersion": 4,
+      "position": [440, 250]
     },
     {
       "parameters": {
@@ -82,14 +81,13 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 2,\n  \"method\": \"opportunities_search-opportunity\",\n  \"params\": {\n    \"locationId\": \"{{ $env.GHL_LOCATION_ID }}\"{{ $json.query.role === 'broker' ? ',\\n    \"assignedTo\": \"' + $json.query.userId + '\"' : '' }}\n  }\n}",
-        "options": {}
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 2,\n  \"method\": \"opportunities_search-opportunity\",\n  \"params\": {\n    \"locationId\": \"{{ $env.GHL_LOCATION_ID }}\"{{ $json.query.role === 'broker' ? ',\\n    \"assignedTo\": \"' + $json.query.userId + '\"' : '' }}\n  }\n}"
       },
       "id": "ghl-get-opportunities",
       "name": "GHL - Get Opportunities",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [640, 300]
+      "typeVersion": 4,
+      "position": [440, 350]
     },
     {
       "parameters": {
@@ -99,23 +97,7 @@
       "name": "Calculate Metrics",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [840, 300]
-    },
-    {
-      "parameters": {
-        "operation": "set",
-        "key": "=metrics_{{ $json.query.userId }}",
-        "value": "={{ JSON.stringify($json) }}",
-        "ttl": 300,
-        "options": {}
-      },
-      "id": "cache-result",
-      "name": "Cache Result (5 min)",
-      "type": "n8n-nodes-base.redis",
-      "typeVersion": 1,
-      "position": [1040, 300],
-      "disabled": true,
-      "notes": "Opcional: Habilita Redis para caching"
+      "position": [640, 300]
     }
   ],
   "connections": {
@@ -156,30 +138,11 @@
           }
         ]
       ]
-    },
-    "Calculate Metrics": {
-      "main": [
-        [
-          {
-            "node": "Cache Result (5 min)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
     }
   },
   "settings": {
     "executionOrder": "v1"
   },
   "staticData": null,
-  "tags": [
-    {
-      "name": "Selvadentro",
-      "id": "selvadentro-ghl"
-    }
-  ],
-  "meta": {
-    "instanceId": "selvadentro-production"
-  }
+  "tags": []
 }
