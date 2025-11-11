@@ -1,0 +1,155 @@
+{
+  "name": "GHL HotLeads Processor",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "start-node",
+      "name": "When workflow is called",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.GHL_MCP_ENDPOINT }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.GHL_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.GHL_API_KEY }}"
+            },
+            {
+              "name": "locationId",
+              "value": "={{ $env.GHL_LOCATION_ID }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"contacts_get-contacts\",\n  \"params\": {\n    \"locationId\": \"{{ $env.GHL_LOCATION_ID }}\",\n    \"limit\": 1000{{ $json.query.role === 'broker' ? ',\\n    \"assignedTo\": \"' + $json.query.userId + '\"' : '' }}\n  }\n}",
+        "options": {}
+      },
+      "id": "ghl-get-contacts",
+      "name": "GHL - Get Contacts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.GHL_MCP_ENDPOINT }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.GHL_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.GHL_API_KEY }}"
+            },
+            {
+              "name": "locationId",
+              "value": "={{ $env.GHL_LOCATION_ID }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 2,\n  \"method\": \"opportunities_search-opportunity\",\n  \"params\": {\n    \"locationId\": \"{{ $env.GHL_LOCATION_ID }}\"{{ $json.query.role === 'broker' ? ',\\n    \"assignedTo\": \"' + $json.query.userId + '\"' : '' }}\n  }\n}",
+        "options": {}
+      },
+      "id": "ghl-get-opportunities",
+      "name": "GHL - Get Opportunities",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 450]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse SSE response if needed\nconst parseSSE = (text) => {\n  const lines = text.split('\\n');\n  for (const line of lines) {\n    if (line.startsWith('data: ')) {\n      const data = line.slice(6);\n      if (data && data !== '[DONE]') {\n        try {\n          return JSON.parse(data);\n        } catch (e) {\n          console.error('Error parsing SSE:', e);\n        }\n      }\n    }\n  }\n  return null;\n};\n\nlet contactsData = $input.first().json;\nlet opportunitiesData = $input.last().json;\n\n// Handle SSE format\nif (typeof contactsData === 'string') {\n  contactsData = parseSSE(contactsData);\n}\nif (typeof opportunitiesData === 'string') {\n  opportunitiesData = parseSSE(opportunitiesData);\n}\n\n// Extract results\nconst contacts = contactsData?.result?.contacts || [];\nconst opportunities = opportunitiesData?.result?.opportunities || [];\n\n// Create opportunities map by contact\nconst oppsByContact = {};\nopportunities.forEach(opp => {\n  const contactId = opp.contactId || opp.contact_id;\n  if (!oppsByContact[contactId]) {\n    oppsByContact[contactId] = [];\n  }\n  oppsByContact[contactId].push(opp);\n});\n\n// Hot Lead Scoring Algorithm (5 factors)\nconst calculateHotScore = (contact) => {\n  let score = 0;\n  const reasons = [];\n  const actions = [];\n  \n  // Factor 1: VIP Tags (40 points)\n  const vipTags = ['VIP', 'Premium', 'Caliente', 'Hot', 'Alta prioridad'];\n  const hasVIPTag = contact.tags?.some(tag => \n    vipTags.some(vip => tag.toLowerCase().includes(vip.toLowerCase()))\n  );\n  if (hasVIPTag) {\n    score += 40;\n    reasons.push('Tiene tag VIP asignado');\n    actions.push('Priorizar contacto inmediato');\n  }\n  \n  // Factor 2: Recent Activity (25 points)\n  const lastActivity = new Date(contact.lastActivityAt || contact.dateAdded);\n  const daysSinceActivity = (new Date() - lastActivity) / (1000 * 60 * 60 * 24);\n  \n  if (daysSinceActivity <= 1) {\n    score += 25;\n    reasons.push('Actividad en últimas 24 horas');\n    actions.push('Contactar hoy mismo');\n  } else if (daysSinceActivity <= 7) {\n    score += 15;\n    reasons.push('Actividad en última semana');\n    actions.push('Programar seguimiento');\n  }\n  \n  // Factor 3: Active Opportunities (20 points)\n  const contactOpps = oppsByContact[contact.id] || [];\n  const activeOpps = contactOpps.filter(o => \n    !['won', 'lost', 'abandoned'].includes(o.status?.toLowerCase())\n  );\n  \n  if (activeOpps.length > 0) {\n    const points = Math.min(activeOpps.length * 7, 20);\n    score += points;\n    reasons.push(`${activeOpps.length} oportunidad(es) activa(s)`);\n    \n    // Check for high-value opportunities\n    const highValue = activeOpps.some(o => (o.monetaryValue || 0) > 200000);\n    if (highValue) {\n      score += 10;\n      reasons.push('Oportunidad de alto valor');\n      actions.push('Enviar propuesta personalizada');\n    }\n  }\n  \n  // Factor 4: Contact Quality (10 points)\n  if (contact.email && contact.phone) {\n    score += 10;\n  }\n  \n  // Factor 5: Source (5 points)\n  const highValueSources = ['referido', 'referral', 'partner', 'website'];\n  if (contact.source && highValueSources.some(s => \n    contact.source.toLowerCase().includes(s)\n  )) {\n    score += 5;\n    reasons.push('Fuente de alta calidad');\n  }\n  \n  // Default actions\n  if (actions.length === 0) {\n    actions.push('Enviar mensaje de seguimiento');\n    actions.push('Actualizar información del lead');\n  }\n  \n  return {\n    score: Math.min(score, 100),\n    reasons,\n    actions\n  };\n};\n\n// Calculate scores for all contacts\nconst scoredContacts = contacts.map(contact => {\n  const scoring = calculateHotScore(contact);\n  \n  return {\n    contactId: contact.id,\n    name: contact.name || `${contact.firstName || ''} ${contact.lastName || ''}`.trim(),\n    email: contact.email,\n    phone: contact.phone,\n    score: scoring.score,\n    temperature: scoring.score >= 80 ? 'very-hot' : \n                 scoring.score >= 60 ? 'hot' : 'warm',\n    reasons: scoring.reasons,\n    suggestedActions: scoring.actions,\n    opportunities: (oppsByContact[contact.id] || []).map(opp => ({\n      id: opp.id,\n      name: opp.name,\n      value: opp.monetaryValue || 0,\n      stage: opp.pipelineStage || opp.stageName || 'Sin etapa'\n    })),\n    tags: contact.tags || [],\n    lastActivity: contact.lastActivityAt || contact.dateAdded\n  };\n});\n\n// Filter only hot leads (score >= 60)\nconst hotLeads = scoredContacts\n  .filter(c => c.score >= 60)\n  .sort((a, b) => b.score - a.score);\n\nreturn {\n  json: {\n    hotLeads,\n    summary: {\n      total: hotLeads.length,\n      veryHot: hotLeads.filter(l => l.temperature === 'very-hot').length,\n      hot: hotLeads.filter(l => l.temperature === 'hot').length,\n      totalPotentialValue: hotLeads.reduce((sum, lead) => {\n        const oppValue = lead.opportunities.reduce((s, o) => s + o.value, 0);\n        return sum + oppValue;\n      }, 0)\n    },\n    _metadata: {\n      processedAt: new Date().toISOString(),\n      totalContactsAnalyzed: contacts.length,\n      scoringAlgorithm: 'v1-5factors'\n    }\n  }\n};"
+      },
+      "id": "calculate-hot-scores",
+      "name": "Calculate Hot Lead Scores",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 375]
+    }
+  ],
+  "connections": {
+    "When workflow is called": {
+      "main": [
+        [
+          {
+            "node": "GHL - Get Contacts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GHL - Get Opportunities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL - Get Contacts": {
+      "main": [
+        [
+          {
+            "node": "Calculate Hot Lead Scores",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL - Get Opportunities": {
+      "main": [
+        [
+          {
+            "node": "Calculate Hot Lead Scores",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "Selvadentro",
+      "id": "selvadentro-ghl"
+    }
+  ]
+}

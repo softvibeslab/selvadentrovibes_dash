@@ -1,0 +1,155 @@
+{
+  "name": "GHL Pipeline Processor",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "start-node",
+      "name": "When workflow is called",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.GHL_MCP_ENDPOINT }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.GHL_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.GHL_API_KEY }}"
+            },
+            {
+              "name": "locationId",
+              "value": "={{ $env.GHL_LOCATION_ID }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"opportunities_search-opportunity\",\n  \"params\": {\n    \"locationId\": \"{{ $env.GHL_LOCATION_ID }}\"{{ $json.query.role === 'broker' ? ',\\n    \"assignedTo\": \"' + $json.query.userId + '\"' : '' }}\n  }\n}",
+        "options": {}
+      },
+      "id": "ghl-get-opportunities",
+      "name": "GHL - Get Opportunities",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.GHL_MCP_ENDPOINT }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.GHL_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.GHL_API_KEY }}"
+            },
+            {
+              "name": "locationId",
+              "value": "={{ $env.GHL_LOCATION_ID }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 2,\n  \"method\": \"pipeline_get-pipelines\",\n  \"params\": {\n    \"locationId\": \"{{ $env.GHL_LOCATION_ID }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "ghl-get-pipelines",
+      "name": "GHL - Get Pipeline Config",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 450]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse SSE response if needed\nconst parseSSE = (text) => {\n  const lines = text.split('\\n');\n  for (const line of lines) {\n    if (line.startsWith('data: ')) {\n      const data = line.slice(6);\n      if (data && data !== '[DONE]') {\n        try {\n          return JSON.parse(data);\n        } catch (e) {\n          console.error('Error parsing SSE:', e);\n        }\n      }\n    }\n  }\n  return null;\n};\n\nlet opportunitiesData = $input.first().json;\nlet pipelinesData = $input.last().json;\n\n// Handle SSE format\nif (typeof opportunitiesData === 'string') {\n  opportunitiesData = parseSSE(opportunitiesData);\n}\nif (typeof pipelinesData === 'string') {\n  pipelinesData = parseSSE(pipelinesData);\n}\n\n// Extract results\nconst opportunities = opportunitiesData?.result?.opportunities || [];\nconst pipelines = pipelinesData?.result?.pipelines || [];\n\n// Filter only active opportunities\nconst activeOpportunities = opportunities.filter(opp => \n  !['won', 'lost', 'abandoned'].includes(opp.status?.toLowerCase())\n);\n\n// Get pipeline stages configuration\nconst pipelineStages = [];\nif (pipelines.length > 0) {\n  const mainPipeline = pipelines[0];\n  if (mainPipeline.stages) {\n    mainPipeline.stages.forEach(stage => {\n      pipelineStages.push({\n        id: stage.id,\n        name: stage.name,\n        order: stage.order || 0\n      });\n    });\n  }\n}\n\n// If no stages from API, use defaults\nif (pipelineStages.length === 0) {\n  pipelineStages.push(\n    { id: 'nuevo', name: 'Nuevo', order: 0 },\n    { id: 'contactado', name: 'Contactado', order: 1 },\n    { id: 'calificado', name: 'Calificado', order: 2 },\n    { id: 'propuesta', name: 'Propuesta', order: 3 },\n    { id: 'negociacion', name: 'Negociación', order: 4 },\n    { id: 'cierre', name: 'Cierre', order: 5 }\n  );\n}\n\n// Group opportunities by stage\nconst stageMap = {};\npipelineStages.forEach(stage => {\n  stageMap[stage.id] = {\n    id: stage.id,\n    name: stage.name,\n    order: stage.order,\n    deals: []\n  };\n});\n\n// Add catch-all for undefined stages\nstageMap['undefined'] = {\n  id: 'undefined',\n  name: 'Sin Etapa',\n  order: 999,\n  deals: []\n};\n\n// Calculate stale threshold (30 days)\nconst thirtyDaysAgo = new Date();\nthirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);\n\n// Organize deals by stage\nactiveOpportunities.forEach(opp => {\n  const stageId = opp.pipelineStageId || opp.stageId || 'undefined';\n  const lastUpdate = new Date(opp.lastStatusChangeDate || opp.updatedAt || opp.createdAt);\n  const daysInStage = Math.floor((new Date() - lastUpdate) / (1000 * 60 * 60 * 24));\n  const isStale = lastUpdate < thirtyDaysAgo;\n  \n  const deal = {\n    id: opp.id,\n    contactName: opp.contactName || opp.contact?.name || 'Sin nombre',\n    contactId: opp.contactId || opp.contact?.id,\n    value: parseFloat(opp.monetaryValue) || 0,\n    createdAt: opp.createdAt,\n    lastActivity: opp.lastStatusChangeDate || opp.updatedAt,\n    daysInStage,\n    isStale,\n    probability: opp.pipelineStageProbability || 0,\n    status: opp.status,\n    source: opp.source,\n    assignedTo: opp.assignedTo\n  };\n  \n  if (stageMap[stageId]) {\n    stageMap[stageId].deals.push(deal);\n  } else {\n    stageMap['undefined'].deals.push(deal);\n  }\n});\n\n// Convert to array and sort by order\nconst stages = Object.values(stageMap)\n  .filter(stage => stage.deals.length > 0 || stage.id !== 'undefined')\n  .sort((a, b) => a.order - b.order);\n\n// Calculate summary\nconst totalValue = activeOpportunities.reduce((sum, opp) => \n  sum + (parseFloat(opp.monetaryValue) || 0), 0\n);\n\nconst totalDeals = activeOpportunities.length;\nconst avgDealValue = totalDeals > 0 ? Math.round(totalValue / totalDeals) : 0;\nconst staleDeals = activeOpportunities.filter(opp => {\n  const lastUpdate = new Date(opp.lastStatusChangeDate || opp.updatedAt);\n  return lastUpdate < thirtyDaysAgo;\n}).length;\n\nreturn {\n  json: {\n    stages,\n    summary: {\n      totalValue: Math.round(totalValue),\n      totalDeals,\n      avgDealValue,\n      staleDeals,\n      stalePercentage: totalDeals > 0 ? ((staleDeals / totalDeals) * 100).toFixed(1) : 0\n    },\n    _metadata: {\n      processedAt: new Date().toISOString(),\n      totalOpportunitiesProcessed: opportunities.length,\n      activeOpportunities: totalDeals,\n      stagesCount: stages.length\n    }\n  }\n};"
+      },
+      "id": "process-pipeline",
+      "name": "Process Pipeline Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 375]
+    }
+  ],
+  "connections": {
+    "When workflow is called": {
+      "main": [
+        [
+          {
+            "node": "GHL - Get Opportunities",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GHL - Get Pipeline Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL - Get Opportunities": {
+      "main": [
+        [
+          {
+            "node": "Process Pipeline Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL - Get Pipeline Config": {
+      "main": [
+        [
+          {
+            "node": "Process Pipeline Data",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "Selvadentro",
+      "id": "selvadentro-ghl"
+    }
+  ]
+}

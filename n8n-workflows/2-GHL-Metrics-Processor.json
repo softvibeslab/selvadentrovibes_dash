@@ -1,0 +1,185 @@
+{
+  "name": "GHL Metrics Processor",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "start-node",
+      "name": "When workflow is called",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.GHL_MCP_ENDPOINT }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.GHL_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.GHL_API_KEY }}"
+            },
+            {
+              "name": "locationId",
+              "value": "={{ $env.GHL_LOCATION_ID }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"contacts_get-contacts\",\n  \"params\": {\n    \"locationId\": \"{{ $env.GHL_LOCATION_ID }}\",\n    \"limit\": 1000{{ $json.query.role === 'broker' ? ',\\n    \"assignedTo\": \"' + $json.query.userId + '\"' : '' }}\n  }\n}",
+        "options": {}
+      },
+      "id": "ghl-get-contacts",
+      "name": "GHL - Get Contacts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.GHL_MCP_ENDPOINT }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.GHL_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.GHL_API_KEY }}"
+            },
+            {
+              "name": "locationId",
+              "value": "={{ $env.GHL_LOCATION_ID }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 2,\n  \"method\": \"opportunities_search-opportunity\",\n  \"params\": {\n    \"locationId\": \"{{ $env.GHL_LOCATION_ID }}\"{{ $json.query.role === 'broker' ? ',\\n    \"assignedTo\": \"' + $json.query.userId + '\"' : '' }}\n  }\n}",
+        "options": {}
+      },
+      "id": "ghl-get-opportunities",
+      "name": "GHL - Get Opportunities",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse SSE response if needed\nconst parseSSE = (text) => {\n  const lines = text.split('\\n');\n  for (const line of lines) {\n    if (line.startsWith('data: ')) {\n      const data = line.slice(6);\n      if (data && data !== '[DONE]') {\n        try {\n          return JSON.parse(data);\n        } catch (e) {\n          console.error('Error parsing SSE data:', e);\n        }\n      }\n    }\n  }\n  return null;\n};\n\nlet contactsData = $input.first().json;\nlet opportunitiesData = $input.last().json;\n\n// Handle SSE format\nif (typeof contactsData === 'string') {\n  contactsData = parseSSE(contactsData);\n}\nif (typeof opportunitiesData === 'string') {\n  opportunitiesData = parseSSE(opportunitiesData);\n}\n\n// Extract results from JSON-RPC 2.0 response\nconst contacts = contactsData?.result?.contacts || [];\nconst opportunities = opportunitiesData?.result?.opportunities || [];\n\n// Calculate metrics\nconst leads = contacts.length;\nconst activeOpportunities = opportunities.filter(o => \n  !['won', 'lost', 'abandoned'].includes(o.status?.toLowerCase())\n);\n\nconst totalOpportunities = activeOpportunities.length;\nconst revenue = activeOpportunities.reduce((sum, opp) => \n  sum + (parseFloat(opp.monetaryValue) || 0), 0\n);\nconst conversion = leads > 0 ? ((totalOpportunities / leads) * 100).toFixed(1) : 0;\n\n// Pipeline calculations\nconst pipelineTotal = revenue;\nconst dealAverage = totalOpportunities > 0 \n  ? Math.round(revenue / totalOpportunities) \n  : 0;\n\n// At-risk deals (>30 days without activity)\nconst thirtyDaysAgo = new Date();\nthirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);\n\nconst atRisk = activeOpportunities.filter(opp => {\n  const lastUpdate = new Date(opp.lastStatusChangeDate || opp.updatedAt);\n  return lastUpdate < thirtyDaysAgo;\n}).length;\n\n// Pipeline by stage\nconst stageMap = {};\nactiveOpportunities.forEach(opp => {\n  const stage = opp.pipelineStage || opp.stageName || 'Sin etapa';\n  if (!stageMap[stage]) {\n    stageMap[stage] = {\n      stage,\n      count: 0,\n      value: 0\n    };\n  }\n  stageMap[stage].count++;\n  stageMap[stage].value += parseFloat(opp.monetaryValue) || 0;\n});\n\nconst pipelineByStage = Object.values(stageMap).map(s => ({\n  ...s,\n  percentage: totalOpportunities > 0 \n    ? ((s.count / totalOpportunities) * 100).toFixed(1) \n    : 0\n}));\n\n// Generate AI insights\nconst insights = [];\nif (atRisk > 0) {\n  insights.push(`${atRisk} deals llevan más de 30 días sin actividad`);\n}\nif (dealAverage > 0 && dealAverage < 150000) {\n  insights.push(`El ticket promedio de $${dealAverage.toLocaleString()} está por debajo del objetivo`);\n}\nif (conversion < 20) {\n  insights.push(`Tasa de conversión del ${conversion}% puede mejorarse`);\n}\nif (insights.length === 0) {\n  insights.push('Pipeline saludable, mantén el ritmo');\n}\n\n// Build response\nreturn {\n  json: {\n    leads,\n    opportunities: totalOpportunities,\n    revenue: Math.round(revenue),\n    conversion: parseFloat(conversion),\n    pipelineTotal: Math.round(pipelineTotal),\n    dealAverage,\n    atRisk,\n    totalDeals: totalOpportunities,\n    pipelineByStage,\n    insights,\n    _metadata: {\n      processedAt: new Date().toISOString(),\n      totalContactsProcessed: leads,\n      totalOpportunitiesProcessed: opportunities.length\n    }\n  }\n};"
+      },
+      "id": "calculate-metrics",
+      "name": "Calculate Metrics",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [840, 300]
+    },
+    {
+      "parameters": {
+        "operation": "set",
+        "key": "=metrics_{{ $json.query.userId }}",
+        "value": "={{ JSON.stringify($json) }}",
+        "ttl": 300,
+        "options": {}
+      },
+      "id": "cache-result",
+      "name": "Cache Result (5 min)",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [1040, 300],
+      "disabled": true,
+      "notes": "Opcional: Habilita Redis para caching"
+    }
+  ],
+  "connections": {
+    "When workflow is called": {
+      "main": [
+        [
+          {
+            "node": "GHL - Get Contacts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GHL - Get Opportunities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL - Get Contacts": {
+      "main": [
+        [
+          {
+            "node": "Calculate Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL - Get Opportunities": {
+      "main": [
+        [
+          {
+            "node": "Calculate Metrics",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Calculate Metrics": {
+      "main": [
+        [
+          {
+            "node": "Cache Result (5 min)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "Selvadentro",
+      "id": "selvadentro-ghl"
+    }
+  ],
+  "meta": {
+    "instanceId": "selvadentro-production"
+  }
+}

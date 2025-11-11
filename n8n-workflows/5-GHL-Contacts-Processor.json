@@ -1,0 +1,155 @@
+{
+  "name": "GHL Contacts Processor",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "start-node",
+      "name": "When workflow is called",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.GHL_MCP_ENDPOINT }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.GHL_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.GHL_API_KEY }}"
+            },
+            {
+              "name": "locationId",
+              "value": "={{ $env.GHL_LOCATION_ID }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"contacts_get-contacts\",\n  \"params\": {\n    \"locationId\": \"{{ $env.GHL_LOCATION_ID }}\",\n    \"limit\": 1000{{ $json.query.search ? ',\\n    \"query\": \"' + $json.query.search + '\"' : '' }}{{ $json.query.role === 'broker' ? ',\\n    \"assignedTo\": \"' + $json.query.userId + '\"' : '' }}\n  }\n}",
+        "options": {}
+      },
+      "id": "ghl-get-contacts",
+      "name": "GHL - Get Contacts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.GHL_MCP_ENDPOINT }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.GHL_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.GHL_API_KEY }}"
+            },
+            {
+              "name": "locationId",
+              "value": "={{ $env.GHL_LOCATION_ID }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 2,\n  \"method\": \"opportunities_search-opportunity\",\n  \"params\": {\n    \"locationId\": \"{{ $env.GHL_LOCATION_ID }}\"{{ $json.query.role === 'broker' ? ',\\n    \"assignedTo\": \"' + $json.query.userId + '\"' : '' }}\n  }\n}",
+        "options": {}
+      },
+      "id": "ghl-get-opportunities",
+      "name": "GHL - Get Opportunities",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 450]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse SSE response\nconst parseSSE = (text) => {\n  const lines = text.split('\\n');\n  for (const line of lines) {\n    if (line.startsWith('data: ')) {\n      const data = line.slice(6);\n      if (data && data !== '[DONE]') {\n        try {\n          return JSON.parse(data);\n        } catch (e) {\n          console.error('Error parsing SSE:', e);\n        }\n      }\n    }\n  }\n  return null;\n};\n\nlet contactsData = $input.first().json;\nlet opportunitiesData = $input.last().json;\n\nif (typeof contactsData === 'string') {\n  contactsData = parseSSE(contactsData);\n}\nif (typeof opportunitiesData === 'string') {\n  opportunitiesData = parseSSE(opportunitiesData);\n}\n\nconst contacts = contactsData?.result?.contacts || [];\nconst opportunities = opportunitiesData?.result?.opportunities || [];\n\n// Create opportunities map by contact\nconst oppsByContact = {};\nopportunities.forEach(opp => {\n  const contactId = opp.contactId || opp.contact_id;\n  if (!oppsByContact[contactId]) {\n    oppsByContact[contactId] = {\n      count: 0,\n      totalValue: 0,\n      opportunities: []\n    };\n  }\n  oppsByContact[contactId].count++;\n  oppsByContact[contactId].totalValue += parseFloat(opp.monetaryValue) || 0;\n  oppsByContact[contactId].opportunities.push(opp);\n});\n\n// Process contacts\nconst processedContacts = contacts.map(contact => {\n  const contactOpps = oppsByContact[contact.id] || { count: 0, totalValue: 0 };\n  \n  return {\n    id: contact.id,\n    name: contact.name || `${contact.firstName || ''} ${contact.lastName || ''}`.trim() || 'Sin nombre',\n    firstName: contact.firstName,\n    lastName: contact.lastName,\n    email: contact.email,\n    phone: contact.phone,\n    tags: contact.tags || [],\n    dateAdded: contact.dateAdded || contact.createdAt,\n    lastActivity: contact.lastActivityAt || contact.dateAdded,\n    opportunitiesCount: contactOpps.count,\n    totalValue: Math.round(contactOpps.totalValue),\n    source: contact.source,\n    assignedTo: contact.assignedTo,\n    country: contact.country,\n    city: contact.city,\n    state: contact.state,\n    customFields: contact.customFields || {}\n  };\n});\n\n// Sort by last activity (most recent first)\nprocessedContacts.sort((a, b) => {\n  const dateA = new Date(a.lastActivity || 0);\n  const dateB = new Date(b.lastActivity || 0);\n  return dateB - dateA;\n});\n\n// Apply search filter if provided\nlet filteredContacts = processedContacts;\nconst searchQuery = $json.query?.search?.toLowerCase();\n\nif (searchQuery) {\n  filteredContacts = processedContacts.filter(contact => \n    contact.name?.toLowerCase().includes(searchQuery) ||\n    contact.email?.toLowerCase().includes(searchQuery) ||\n    contact.phone?.includes(searchQuery)\n  );\n}\n\nreturn {\n  json: {\n    contacts: filteredContacts,\n    total: filteredContacts.length,\n    summary: {\n      totalContacts: filteredContacts.length,\n      withEmail: filteredContacts.filter(c => c.email).length,\n      withPhone: filteredContacts.filter(c => c.phone).length,\n      withOpportunities: filteredContacts.filter(c => c.opportunitiesCount > 0).length,\n      totalValue: filteredContacts.reduce((sum, c) => sum + c.totalValue, 0)\n    },\n    _metadata: {\n      processedAt: new Date().toISOString(),\n      totalContactsProcessed: contacts.length,\n      searchApplied: !!searchQuery,\n      searchQuery: searchQuery || null\n    }\n  }\n};"
+      },
+      "id": "process-contacts",
+      "name": "Process Contacts Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 375]
+    }
+  ],
+  "connections": {
+    "When workflow is called": {
+      "main": [
+        [
+          {
+            "node": "GHL - Get Contacts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GHL - Get Opportunities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL - Get Contacts": {
+      "main": [
+        [
+          {
+            "node": "Process Contacts Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL - Get Opportunities": {
+      "main": [
+        [
+          {
+            "node": "Process Contacts Data",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "Selvadentro",
+      "id": "selvadentro-ghl"
+    }
+  ]
+}
