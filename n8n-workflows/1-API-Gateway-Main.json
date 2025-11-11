@@ -5,116 +5,121 @@
       "parameters": {
         "httpMethod": "GET",
         "path": "selvadentro",
-        "responseMode": "responseNode",
-        "options": {
-          "allowedOrigins": "*"
-        }
+        "responseMode": "responseNode"
       },
       "id": "webhook-trigger",
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [250, 300],
-      "webhookId": "selvadentro-main"
+      "position": [250, 300]
     },
     {
       "parameters": {
-        "mode": "rules",
-        "rules": {
-          "rules": [
+        "conditions": {
+          "string": [
             {
-              "conditions": {
-                "all": [
-                  {
-                    "type": "simple",
-                    "leftValue": "={{ $json.query.endpoint }}",
-                    "operator": "equals",
-                    "rightValue": "metrics"
-                  }
-                ]
-              },
-              "renameOutput": true,
-              "outputKey": "metrics"
-            },
-            {
-              "conditions": {
-                "all": [
-                  {
-                    "type": "simple",
-                    "leftValue": "={{ $json.query.endpoint }}",
-                    "operator": "equals",
-                    "rightValue": "pipeline"
-                  }
-                ]
-              },
-              "renameOutput": true,
-              "outputKey": "pipeline"
-            },
-            {
-              "conditions": {
-                "all": [
-                  {
-                    "type": "simple",
-                    "leftValue": "={{ $json.query.endpoint }}",
-                    "operator": "equals",
-                    "rightValue": "contacts"
-                  }
-                ]
-              },
-              "renameOutput": true,
-              "outputKey": "contacts"
-            },
-            {
-              "conditions": {
-                "all": [
-                  {
-                    "type": "simple",
-                    "leftValue": "={{ $json.query.endpoint }}",
-                    "operator": "equals",
-                    "rightValue": "contact360"
-                  }
-                ]
-              },
-              "renameOutput": true,
-              "outputKey": "contact360"
-            },
-            {
-              "conditions": {
-                "all": [
-                  {
-                    "type": "simple",
-                    "leftValue": "={{ $json.query.endpoint }}",
-                    "operator": "equals",
-                    "rightValue": "hot-leads"
-                  }
-                ]
-              },
-              "renameOutput": true,
-              "outputKey": "hot-leads"
-            },
-            {
-              "conditions": {
-                "all": [
-                  {
-                    "type": "simple",
-                    "leftValue": "={{ $json.query.endpoint }}",
-                    "operator": "equals",
-                    "rightValue": "follow-ups"
-                  }
-                ]
-              },
-              "renameOutput": true,
-              "outputKey": "follow-ups"
+              "value1": "={{ $json.query.endpoint }}",
+              "operation": "equals",
+              "value2": "metrics"
             }
           ]
-        },
-        "options": {}
+        }
       },
-      "id": "switch-endpoint",
-      "name": "Route by Endpoint",
-      "type": "n8n-nodes-base.switch",
-      "typeVersion": 3,
+      "id": "if-metrics",
+      "name": "IF Metrics",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 100]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.query.endpoint }}",
+              "operation": "equals",
+              "value2": "pipeline"
+            }
+          ]
+        }
+      },
+      "id": "if-pipeline",
+      "name": "IF Pipeline",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.query.endpoint }}",
+              "operation": "equals",
+              "value2": "contacts"
+            }
+          ]
+        }
+      },
+      "id": "if-contacts",
+      "name": "IF Contacts",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
       "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.query.endpoint }}",
+              "operation": "equals",
+              "value2": "contact360"
+            }
+          ]
+        }
+      },
+      "id": "if-contact360",
+      "name": "IF Contact360",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.query.endpoint }}",
+              "operation": "equals",
+              "value2": "hot-leads"
+            }
+          ]
+        }
+      },
+      "id": "if-hotleads",
+      "name": "IF HotLeads",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 500]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.query.endpoint }}",
+              "operation": "equals",
+              "value2": "follow-ups"
+            }
+          ]
+        }
+      },
+      "id": "if-followups",
+      "name": "IF FollowUps",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 600]
     },
     {
       "parameters": {
@@ -178,14 +183,13 @@
     },
     {
       "parameters": {
-        "respondWith": "allIncomingItems",
-        "options": {}
+        "respondWith": "allIncomingItems"
       },
       "id": "respond-webhook",
       "name": "Respond to Webhook",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [850, 300]
+      "position": [850, 350]
     }
   ],
   "connections": {
@@ -193,14 +197,39 @@
       "main": [
         [
           {
-            "node": "Route by Endpoint",
+            "node": "IF Metrics",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF Pipeline",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF Contacts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF Contact360",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF HotLeads",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF FollowUps",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Route by Endpoint": {
+    "IF Metrics": {
       "main": [
         [
           {
@@ -208,35 +237,55 @@
             "type": "main",
             "index": 0
           }
-        ],
+        ]
+      ]
+    },
+    "IF Pipeline": {
+      "main": [
         [
           {
             "node": "Execute Pipeline Workflow",
             "type": "main",
             "index": 0
           }
-        ],
+        ]
+      ]
+    },
+    "IF Contacts": {
+      "main": [
         [
           {
             "node": "Execute Contacts Workflow",
             "type": "main",
             "index": 0
           }
-        ],
+        ]
+      ]
+    },
+    "IF Contact360": {
+      "main": [
         [
           {
             "node": "Execute Contact360 Workflow",
             "type": "main",
             "index": 0
           }
-        ],
+        ]
+      ]
+    },
+    "IF HotLeads": {
+      "main": [
         [
           {
             "node": "Execute HotLeads Workflow",
             "type": "main",
             "index": 0
           }
-        ],
+        ]
+      ]
+    },
+    "IF FollowUps": {
+      "main": [
         [
           {
             "node": "Execute FollowUps Workflow",
@@ -317,13 +366,5 @@
     "executionOrder": "v1"
   },
   "staticData": null,
-  "tags": [
-    {
-      "name": "Selvadentro",
-      "id": "selvadentro-api"
-    }
-  ],
-  "meta": {
-    "instanceId": "selvadentro-production"
-  }
+  "tags": []
 }

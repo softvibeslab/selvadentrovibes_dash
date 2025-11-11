@@ -41,13 +41,12 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"contacts_get-contact-by-id\",\n  \"params\": {\n    \"contactId\": \"{{ $json.query.contactId }}\"\n  }\n}",
-        "options": {}
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"contacts_get-contact-by-id\",\n  \"params\": {\n    \"contactId\": \"{{ $json.query.contactId }}\"\n  }\n}"
       },
       "id": "ghl-get-contact",
       "name": "GHL - Get Contact Details",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "typeVersion": 4,
       "position": [440, 200]
     },
     {
@@ -82,13 +81,12 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 2,\n  \"method\": \"opportunities_search-opportunity\",\n  \"params\": {\n    \"contactId\": \"{{ $json.query.contactId }}\"\n  }\n}",
-        "options": {}
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 2,\n  \"method\": \"opportunities_search-opportunity\",\n  \"params\": {\n    \"contactId\": \"{{ $json.query.contactId }}\"\n  }\n}"
       },
       "id": "ghl-get-opportunities",
       "name": "GHL - Get Opportunities",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "typeVersion": 4,
       "position": [440, 300]
     },
     {
@@ -123,13 +121,12 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 3,\n  \"method\": \"notes_get-notes\",\n  \"params\": {\n    \"contactId\": \"{{ $json.query.contactId }}\"\n  }\n}",
-        "options": {}
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 3,\n  \"method\": \"notes_get-notes\",\n  \"params\": {\n    \"contactId\": \"{{ $json.query.contactId }}\"\n  }\n}"
       },
       "id": "ghl-get-notes",
       "name": "GHL - Get Notes",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "typeVersion": 4,
       "position": [440, 400]
     },
     {
@@ -164,13 +161,12 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 4,\n  \"method\": \"tasks_get-tasks\",\n  \"params\": {\n    \"contactId\": \"{{ $json.query.contactId }}\"\n  }\n}",
-        "options": {}
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 4,\n  \"method\": \"tasks_get-tasks\",\n  \"params\": {\n    \"contactId\": \"{{ $json.query.contactId }}\"\n  }\n}"
       },
       "id": "ghl-get-tasks",
       "name": "GHL - Get Tasks",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "typeVersion": 4,
       "position": [440, 500]
     },
     {
@@ -260,10 +256,5 @@
     "executionOrder": "v1"
   },
   "staticData": null,
-  "tags": [
-    {
-      "name": "Selvadentro",
-      "id": "selvadentro-ghl"
-    }
-  ]
+  "tags": []
 }
