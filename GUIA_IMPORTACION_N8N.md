@@ -3,6 +3,20 @@
 
 ---
 
+## 🎉 NUEVO - CONFIGURACIÓN SIMPLIFICADA
+
+**¡Ya no necesitas configurar variables de entorno!**
+
+Las credenciales de GoHighLevel ahora están **embebidas en cada workflow** usando un nodo "Edit Fields".
+
+✅ **Más fácil**: Solo importa y activa
+✅ **Más rápido**: Setup en 10 minutos
+✅ **Más portable**: Funciona en cualquier instalación de N8N
+
+👉 Si necesitas cambiar las credenciales, lee: **`N8N_CONFIGURACION_CREDENCIALES.md`**
+
+---
+
 ## 📋 INFORMACIÓN NECESARIA
 
 Antes de empezar, ten a mano:
@@ -11,11 +25,13 @@ Antes de empezar, ten a mano:
 - [ ] **URL de N8N**: `http://tu-ip:5678` o `https://n8n.tudominio.com`
 - [ ] **URL del Dashboard**: `https://dashboard.selvadentro.com`
 
-### Credenciales de GoHighLevel (ya las tienes):
-- [ ] `GHL_MCP_ENDPOINT`: `https://services.leadconnectorhq.com/mcp/`
-- [ ] `GHL_API_KEY`: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
-- [ ] `GHL_ACCESS_TOKEN`: `pit-84d7687f-d43f-4434-9804-c671c669dd0f`
-- [ ] `GHL_LOCATION_ID`: `crN2IhAuOBAl7D8324yI`
+### ✅ Credenciales de GoHighLevel
+
+**¡BUENAS NOTICIAS!** Las credenciales ya están embebidas en los workflows.
+
+Si usas las mismas credenciales del ejemplo, **no necesitas hacer nada**.
+
+Si usas otras credenciales, solo necesitas editarlas después de importar (ver `N8N_CONFIGURACION_CREDENCIALES.md`).
 
 ---
 
@@ -24,42 +40,6 @@ Antes de empezar, ten a mano:
 1. Abre tu navegador
 2. Ve a tu URL de N8N: `http://TU_IP:5678`
 3. Login con tus credenciales
-
----
-
-## ⚙️ PASO 2: CONFIGURAR VARIABLES DE ENTORNO (3 min)
-
-### Opción A: En la Interfaz de N8N
-
-1. Click en **Settings** (engranaje arriba a la derecha)
-2. Click en **Environments**
-3. Agrega las siguientes variables:
-
-| Variable | Valor |
-|----------|-------|
-| `GHL_MCP_ENDPOINT` | `https://services.leadconnectorhq.com/mcp/` |
-| `GHL_API_KEY` | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2NhdGlvbl9pZCI6ImNyTjJJaEF1T0JBbDdEODMyNHlJIiwidmVyc2lvbiI6MSwiaWF0IjoxNzQ5OTY5Njg5MjkxLCJzdWIiOiJnRFhtNHJJQjZJbjhxa3Q1dXpKWSJ9.HKfmsDYjb30fxRu6n40R39ED-NEuoWYhJjKvGtxjeUg` |
-| `GHL_ACCESS_TOKEN` | `pit-84d7687f-d43f-4434-9804-c671c669dd0f` |
-| `GHL_LOCATION_ID` | `crN2IhAuOBAl7D8324yI` |
-
-4. Click **Save**
-
-### Opción B: En Docker Compose (si usas Docker)
-
-Edita tu `docker-compose.yml` y agrega:
-
-```yaml
-environment:
-  - GHL_MCP_ENDPOINT=https://services.leadconnectorhq.com/mcp/
-  - GHL_API_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-  - GHL_ACCESS_TOKEN=pit-84d7687f-d43f-4434-9804-c671c669dd0f
-  - GHL_LOCATION_ID=crN2IhAuOBAl7D8324yI
-```
-
-Luego reinicia:
-```bash
-docker-compose restart n8n
-```
 
 ---
 
@@ -212,13 +192,14 @@ curl 'http://TU_IP:5678/webhook/selvadentro?endpoint=follow-ups&userId=test123&r
 Marca cada item cuando esté completado:
 
 - [ ] N8N accesible
-- [ ] Variables de entorno configuradas
+- [ ] ~~Variables de entorno configuradas~~ **YA NO NECESARIO** ✅
 - [ ] Workflow Principal importado y activo
 - [ ] Webhook URL copiada
 - [ ] Todos los sub-workflows importados (6 workflows)
 - [ ] Todos los sub-workflows activos
 - [ ] IDs anotados para cada workflow
 - [ ] IDs conectados en el workflow principal
+- [ ] **Si usas otras credenciales**: Editadas en nodo "Edit Fields" de workflows 2-7
 - [ ] Test de Metrics exitoso (200 OK con datos)
 - [ ] Test de Hot Leads exitoso
 - [ ] Test de Pipeline exitoso
