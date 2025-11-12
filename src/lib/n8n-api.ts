@@ -14,7 +14,8 @@ const WEBHOOK_PATH = '/webhook/selvadentro';
  */
 interface BaseParams {
   userId: string;
-  role: 'admin' | 'broker';
+  role: 'admin' | 'broker' | 'user';
+  [key: string]: string;
 }
 
 /**
@@ -27,6 +28,7 @@ interface N8NResponse<T> {
     [key: string]: any;
   };
   error?: string;
+  [key: string]: any;
 }
 
 /**
@@ -60,7 +62,7 @@ class N8NClient {
   /**
    * Realiza una petición GET al webhook de N8N
    */
-  private async request<T>(
+  private async request<T = any>(
     endpoint: string,
     params: Record<string, string>
   ): Promise<T> {
@@ -78,7 +80,7 @@ class N8NClient {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as T;
       return data;
     } catch (error) {
       console.error(`N8N API Error [${endpoint}]:`, error);
@@ -114,7 +116,7 @@ class N8NClient {
     const { search, ...baseParams } = params;
     const requestParams: Record<string, string> = { ...baseParams };
 
-    if (search) {
+    if (search && search.trim()) {
       requestParams.search = search;
     }
 

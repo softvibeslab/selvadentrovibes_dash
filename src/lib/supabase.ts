@@ -18,9 +18,11 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 export interface User {
   id: string;
   email: string;
-  role: 'admin' | 'user';
+  role: 'admin' | 'broker' | 'user';
   full_name: string;
   ghl_user_id: string | null;
+  user_id?: string;
+  location_id?: string;
   profile_photo: string | null;
   created_at: string;
   last_login: string;

@@ -1,18 +1,32 @@
+/**
+ * Contact Service - Hybrid Version (N8N + Direct MCP)
+ *
+ * Servicio híbrido para gestión de contactos:
+ * - Funciones principales: N8N (optimizado con cache)
+ * - Funciones auxiliares: Direct MCP calls
+ */
+
 import { User } from './supabase';
+import { n8nApi } from './n8n-api';
 import { callMCPTool } from './ghl-mcp';
 
 export interface Contact {
   id: string;
-  firstName: string;
-  lastName: string;
   name: string;
-  email: string;
-  phone: string;
-  tags: string[];
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  tags?: string[];
+  dateAdded?: string;
+  lastActivity?: string;
+  opportunitiesCount?: number;
+  totalValue?: number;
   source?: string;
   assignedTo?: string;
-  dateAdded: string;
-  lastActivity?: string;
+  country?: string;
+  city?: string;
+  state?: string;
   customFields?: Record<string, any>;
 }
 
@@ -51,6 +65,130 @@ export interface ContactStats {
   lifetimeValue: number;
 }
 
+export interface Contact360 {
+  contact: Contact;
+  opportunities: Array<{
+    id: string;
+    name: string;
+    value: number;
+    stage: string;
+    probability: number;
+    status: string;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  timeline: Array<{
+    id: string;
+    type: 'note' | 'task' | 'opportunity';
+    title: string;
+    description: string;
+    date: string;
+    completed?: boolean;
+    createdBy?: string;
+  }>;
+  stats: {
+    totalInteractions: number;
+    notesCount: number;
+    tasksTotal: number;
+    tasksCompleted: number;
+    tasksPending: number;
+    opportunitiesCount: number;
+    opportunitiesValue: number;
+  };
+  heatmap: {
+    data: Array<{
+      date: string;
+      count: number;
+    }>;
+  };
+  dealScore: {
+    score: number;
+    factors: Array<{
+      name: string;
+      value: number;
+      weight: number;
+    }>;
+  };
+}
+
+/**
+ * Obtiene lista de contactos a través de N8N
+ */
+export async function fetchContacts(
+  user: User,
+  search?: string
+): Promise<{ contacts: Contact[]; total: number; summary: any }> {
+  console.log('👥 Obteniendo contactos de N8N...');
+
+  try {
+    const response = await n8nApi.getContacts({
+      userId: user.ghl_user_id || user.id,
+      role: user.role || 'broker',
+      search,
+    });
+
+    return {
+      contacts: response.contacts || [],
+      total: response.total || 0,
+      summary: response.summary || {},
+    };
+  } catch (error) {
+    console.error('❌ Error obteniendo contactos:', error);
+    return {
+      contacts: [],
+      total: 0,
+      summary: {},
+    };
+  }
+}
+
+/**
+ * Obtiene vista 360° de un contacto específico
+ */
+export async function fetchContact360(
+  user: User,
+  contactId: string
+): Promise<Contact360 | null> {
+  console.log(`🎯 Obteniendo Contact360 de N8N para contactId: ${contactId}...`);
+
+  try {
+    const response = await n8nApi.getContact360({
+      userId: user.ghl_user_id || user.id,
+      role: user.role || 'broker',
+      contactId,
+    });
+
+    return response as Contact360;
+  } catch (error) {
+    console.error('❌ Error obteniendo Contact360:', error);
+    return null;
+  }
+}
+
+/**
+ * Busca contactos por término de búsqueda
+ */
+export async function searchContacts(
+  searchTerm: string,
+  user: User
+): Promise<Contact[]> {
+  if (!searchTerm || searchTerm.trim().length < 2) {
+    return [];
+  }
+
+  console.log(`🔍 Buscando contactos: "${searchTerm}"...`);
+
+  try {
+    const { contacts } = await fetchContacts(user, searchTerm);
+    return contacts;
+  } catch (error) {
+    console.error('❌ Error buscando contactos:', error);
+    return [];
+  }
+}
+
+// ===== FUNCIONES AUXILIARES (Direct MCP Calls) =====
+
 /**
  * Obtiene detalles completos de un contacto
  */
@@ -62,11 +200,11 @@ export async function getContactDetails(
     const response = await callMCPTool(
       'contacts_get-contact',
       {
-        locationId: 'crN2IhAuOBAl7D8324yI',
+        locationId: user.location_id || 'crN2IhAuOBAl7D8324yI',
         contactId: contactId,
       },
       user.role,
-      user.ghl_user_id
+      user.ghl_user_id || undefined
     );
 
     if (!response.success || !response.data?.contact) {
@@ -106,11 +244,11 @@ export async function getContactOpportunities(
     const response = await callMCPTool(
       'opportunities_search-opportunity',
       {
-        locationId: 'crN2IhAuOBAl7D8324yI',
+        locationId: user.location_id || 'crN2IhAuOBAl7D8324yI',
         contactId: contactId,
       },
       user.role,
-      user.ghl_user_id
+      user.ghl_user_id || undefined
     );
 
     if (!response.success || !response.data?.opportunities) {
@@ -148,11 +286,11 @@ export async function getContactTimeline(
     const tasksResponse = await callMCPTool(
       'contacts_get-all-tasks',
       {
-        locationId: 'crN2IhAuOBAl7D8324yI',
+        locationId: user.location_id || 'crN2IhAuOBAl7D8324yI',
         contactId: contactId,
       },
       user.role,
-      user.ghl_user_id
+      user.ghl_user_id || undefined
     );
 
     if (tasksResponse.success && tasksResponse.data?.tasks) {
@@ -175,11 +313,11 @@ export async function getContactTimeline(
     const conversationsResponse = await callMCPTool(
       'conversations_search-conversation',
       {
-        locationId: 'crN2IhAuOBAl7D8324yI',
+        locationId: user.location_id || 'crN2IhAuOBAl7D8324yI',
         contactId: contactId,
       },
       user.role,
-      user.ghl_user_id
+      user.ghl_user_id || undefined
     );
 
     if (conversationsResponse.success && conversationsResponse.data?.conversations) {
@@ -201,11 +339,11 @@ export async function getContactTimeline(
     const eventsResponse = await callMCPTool(
       'calendars_get-calendar-events',
       {
-        locationId: 'crN2IhAuOBAl7D8324yI',
+        locationId: user.location_id || 'crN2IhAuOBAl7D8324yI',
         contactId: contactId,
       },
       user.role,
-      user.ghl_user_id
+      user.ghl_user_id || undefined
     );
 
     if (eventsResponse.success && eventsResponse.data?.events) {
@@ -420,54 +558,4 @@ function calculateProbability(stage: string): number {
   };
 
   return stageMap[stage.toLowerCase()] || 25;
-}
-
-/**
- * Busca contactos por query
- */
-export async function searchContacts(
-  query: string,
-  user: User
-): Promise<Contact[]> {
-  try {
-    const response = await callMCPTool(
-      'contacts_get-contacts',
-      {
-        locationId: 'crN2IhAuOBAl7D8324yI',
-        ...(user.role === 'user' ? { assignedTo: user.ghl_user_id } : {}),
-      },
-      user.role,
-      user.ghl_user_id
-    );
-
-    if (!response.success || !response.data?.contacts) {
-      return [];
-    }
-
-    // Filtrar por query
-    const lowerQuery = query.toLowerCase();
-    return response.data.contacts
-      .filter((contact: any) => {
-        const name = `${contact.firstName || ''} ${contact.lastName || ''}`.toLowerCase();
-        const email = (contact.email || '').toLowerCase();
-        return name.includes(lowerQuery) || email.includes(lowerQuery);
-      })
-      .map((contact: any) => ({
-        id: contact.id,
-        firstName: contact.firstName || '',
-        lastName: contact.lastName || '',
-        name: `${contact.firstName || ''} ${contact.lastName || ''}`.trim() || contact.email,
-        email: contact.email || '',
-        phone: contact.phone || '',
-        tags: contact.tags || [],
-        source: contact.source,
-        assignedTo: contact.assignedTo,
-        dateAdded: contact.dateAdded || contact.createdAt,
-        lastActivity: contact.lastActivity,
-      }))
-      .slice(0, 50); // Limitar a 50 resultados
-  } catch (error) {
-    console.error('Error searching contacts:', error);
-    return [];
-  }
 }

@@ -1,11 +1,29 @@
+/**
+ * Metrics Service - N8N Version
+ *
+ * Servicio para obtener métricas del dashboard usando N8N como intermediario
+ * Reemplaza las llamadas directas a GHL MCP
+ */
+
 import { User } from './supabase';
-import { callMCPTool } from './ghl-mcp';
+import { n8nApi } from './n8n-api';
 
 export interface Metrics {
   leads: number;
   opportunities: number;
   revenue: number;
   conversion: number;
+  pipelineTotal?: number;
+  dealAverage?: number;
+  atRisk?: number;
+  totalDeals?: number;
+  pipelineByStage?: Array<{
+    stage: string;
+    count: number;
+    value: number;
+    percentage: string;
+  }>;
+  insights?: string[];
   loading: boolean;
   error?: string;
 }
@@ -20,7 +38,7 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
 const metricsCache = new Map<string, CacheEntry>();
 
 /**
- * Obtiene métricas reales de GoHighLevel usando las herramientas MCP
+ * Obtiene métricas reales de GoHighLevel a través de N8N
  */
 export async function fetchRealMetrics(user: User): Promise<Metrics> {
   const cacheKey = `metrics-${user.id}`;
@@ -32,82 +50,42 @@ export async function fetchRealMetrics(user: User): Promise<Metrics> {
     return cached.data;
   }
 
-  console.log('📊 Obteniendo métricas reales de GHL...');
+  console.log('📊 Obteniendo métricas de N8N...');
 
   try {
-    // Parámetros base según el rol del usuario
-    const isAdmin = user.role === 'admin';
-    const userId = user.ghl_user_id;
-
-    // 1. Obtener contactos (Leads)
-    const contactsResponse = await callMCPTool(
-      'contacts_get-contacts',
-      {
-        locationId: 'crN2IhAuOBAl7D8324yI',
-        ...(isAdmin ? {} : { assignedTo: userId }),
-      },
-      user.role,
-      userId
-    );
-
-    const totalLeads = contactsResponse.success && contactsResponse.data?.contacts
-      ? contactsResponse.data.contacts.length
-      : 0;
-
-    // 2. Obtener oportunidades activas
-    const opportunitiesResponse = await callMCPTool(
-      'opportunities_search-opportunity',
-      {
-        locationId: 'crN2IhAuOBAl7D8324yI',
-        ...(isAdmin ? {} : { assignedTo: userId }),
-      },
-      user.role,
-      userId
-    );
-
-    const opportunities = opportunitiesResponse.success && opportunitiesResponse.data?.opportunities
-      ? opportunitiesResponse.data.opportunities
-      : [];
-
-    const totalOpportunities = opportunities.length;
-
-    // 3. Calcular revenue (suma de oportunidades ganadas)
-    let totalRevenue = 0;
-    let wonOpportunities = 0;
-
-    opportunities.forEach((opp: any) => {
-      // Oportunidades ganadas (status = "won" o stage final)
-      if (opp.status === 'won' || opp.status === 'closed' || opp.monetaryValue > 0) {
-        totalRevenue += parseFloat(opp.monetaryValue || 0);
-        wonOpportunities++;
-      }
+    // Llamar al endpoint de N8N
+    const response = await n8nApi.getMetrics({
+      userId: user.ghl_user_id || user.id,
+      role: user.role || 'broker',
     });
 
-    // 4. Calcular tasa de conversión
-    const conversionRate = totalLeads > 0
-      ? Math.round((wonOpportunities / totalLeads) * 100)
-      : 0;
-
-    const metrics: Metrics = {
-      leads: totalLeads,
-      opportunities: totalOpportunities,
-      revenue: totalRevenue,
-      conversion: conversionRate,
+    // Extraer datos de la respuesta
+    const metricsData = {
+      leads: response.leads || 0,
+      opportunities: response.opportunities || 0,
+      revenue: response.revenue || 0,
+      conversion: response.conversion || 0,
+      pipelineTotal: response.pipelineTotal || 0,
+      dealAverage: response.dealAverage || 0,
+      atRisk: response.atRisk || 0,
+      totalDeals: response.totalDeals || 0,
+      pipelineByStage: response.pipelineByStage || [],
+      insights: response.insights || [],
       loading: false,
     };
 
     // Guardar en cache
     metricsCache.set(cacheKey, {
-      data: metrics,
+      data: metricsData,
       timestamp: Date.now(),
     });
 
-    console.log('✅ Métricas reales obtenidas:', metrics);
-
-    return metrics;
+    console.log('✅ Métricas obtenidas exitosamente:', metricsData);
+    return metricsData;
   } catch (error) {
     console.error('❌ Error obteniendo métricas:', error);
 
+    // Retornar métricas vacías en caso de error
     return {
       leads: 0,
       opportunities: 0,
@@ -120,7 +98,7 @@ export async function fetchRealMetrics(user: User): Promise<Metrics> {
 }
 
 /**
- * Limpia el cache de métricas para forzar una actualización
+ * Limpia el cache de métricas
  */
 export function clearMetricsCache(userId?: string) {
   if (userId) {
@@ -131,65 +109,58 @@ export function clearMetricsCache(userId?: string) {
 }
 
 /**
- * Obtiene métricas detalladas adicionales (para dashboard ejecutivo)
+ * Obtiene hot leads a través de N8N
  */
-export async function fetchDetailedMetrics(user: User) {
-  console.log('📊 Obteniendo métricas detalladas...');
+export async function fetchHotLeads(user: User) {
+  console.log('🔥 Obteniendo hot leads de N8N...');
 
   try {
-    const isAdmin = user.role === 'admin';
-    const userId = user.ghl_user_id;
-
-    // Obtener oportunidades para análisis detallado
-    const opportunitiesResponse = await callMCPTool(
-      'opportunities_search-opportunity',
-      {
-        locationId: 'crN2IhAuOBAl7D8324yI',
-        ...(isAdmin ? {} : { assignedTo: userId }),
-      },
-      user.role,
-      userId
-    );
-
-    const opportunities = opportunitiesResponse.success && opportunitiesResponse.data?.opportunities
-      ? opportunitiesResponse.data.opportunities
-      : [];
-
-    // Análisis por etapa del pipeline
-    const pipelineAnalysis: Record<string, { count: number; value: number }> = {};
-
-    opportunities.forEach((opp: any) => {
-      const stage = opp.pipelineStage || opp.status || 'unknown';
-      if (!pipelineAnalysis[stage]) {
-        pipelineAnalysis[stage] = { count: 0, value: 0 };
-      }
-      pipelineAnalysis[stage].count++;
-      pipelineAnalysis[stage].value += parseFloat(opp.monetaryValue || 0);
+    const response = await n8nApi.getHotLeads({
+      userId: user.ghl_user_id || user.id,
+      role: user.role || 'broker',
     });
 
-    // Identificar deals en riesgo (sin actividad reciente)
-    const now = Date.now();
-    const thirtyDaysAgo = now - (30 * 24 * 60 * 60 * 1000);
+    return response.hotLeads || [];
+  } catch (error) {
+    console.error('❌ Error obteniendo hot leads:', error);
+    return [];
+  }
+}
 
-    const dealsAtRisk = opportunities.filter((opp: any) => {
-      const lastUpdate = new Date(opp.lastStatusChangeAt || opp.updatedAt).getTime();
-      return opp.status !== 'won' && opp.status !== 'lost' && lastUpdate < thirtyDaysAgo;
+/**
+ * Obtiene sugerencias de follow-up a través de N8N
+ */
+export async function fetchFollowUpSuggestions(user: User) {
+  console.log('📋 Obteniendo sugerencias de follow-up de N8N...');
+
+  try {
+    const response = await n8nApi.getFollowUps({
+      userId: user.ghl_user_id || user.id,
+      role: user.role || 'broker',
     });
-
-    // Calcular tamaño promedio de deal
-    const totalValue = opportunities.reduce((sum: number, opp: any) =>
-      sum + parseFloat(opp.monetaryValue || 0), 0
-    );
-    const avgDealSize = opportunities.length > 0 ? totalValue / opportunities.length : 0;
 
     return {
-      pipelineAnalysis,
-      dealsAtRisk: dealsAtRisk.length,
-      avgDealSize,
-      totalPipelineValue: totalValue,
+      suggestions: response.suggestions || [],
+      summary: response.summary || {
+        total: 0,
+        high: 0,
+        medium: 0,
+        low: 0,
+        totalPotentialValue: 0,
+      },
     };
   } catch (error) {
-    console.error('❌ Error obteniendo métricas detalladas:', error);
-    return null;
+    console.error('❌ Error obteniendo follow-ups:', error);
+    return {
+      suggestions: [],
+      summary: { total: 0, high: 0, medium: 0, low: 0, totalPotentialValue: 0 },
+    };
   }
+}
+
+/**
+ * Alias para fetchRealMetrics (para compatibilidad con componentes antiguos)
+ */
+export async function fetchDetailedMetrics(user: User) {
+  return fetchRealMetrics(user);
 }
