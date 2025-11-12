@@ -159,8 +159,22 @@ export async function fetchFollowUpSuggestions(user: User) {
 }
 
 /**
- * Alias para fetchRealMetrics (para compatibilidad con componentes antiguos)
+ * Obtiene métricas detalladas para el Executive Dashboard
  */
 export async function fetchDetailedMetrics(user: User) {
-  return fetchRealMetrics(user);
+  const metrics = await fetchRealMetrics(user);
+
+  // Transformar al formato esperado por ExecutiveDashboard
+  return {
+    pipelineAnalysis: metrics.pipelineByStage?.reduce((acc, stage) => {
+      acc[stage.stage] = {
+        count: stage.count,
+        value: stage.value,
+      };
+      return acc;
+    }, {} as Record<string, { count: number; value: number }>) || {},
+    dealsAtRisk: metrics.atRisk || 0,
+    avgDealSize: metrics.dealAverage || 0,
+    totalPipelineValue: metrics.pipelineTotal || 0,
+  };
 }

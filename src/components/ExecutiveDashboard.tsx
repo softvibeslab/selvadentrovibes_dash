@@ -65,7 +65,12 @@ export function ExecutiveDashboard({ user }: ExecutiveDashboardProps) {
     );
   }
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number | undefined) => {
+    // Manejar valores undefined, null, NaN o Infinity
+    if (value === undefined || value === null || isNaN(value) || !isFinite(value)) {
+      return '$0';
+    }
+
     if (value >= 1000000) {
       return `$${(value / 1000000).toFixed(1)}M`;
     } else if (value >= 1000) {
@@ -117,7 +122,7 @@ export function ExecutiveDashboard({ user }: ExecutiveDashboardProps) {
     name: formatStageName(stage),
     count: data.count,
     value: data.value,
-    percentage: (data.value / metrics.totalPipelineValue) * 100,
+    percentage: metrics.totalPipelineValue > 0 ? (data.value / metrics.totalPipelineValue) * 100 : 0,
   }));
 
   return (
@@ -185,7 +190,7 @@ export function ExecutiveDashboard({ user }: ExecutiveDashboardProps) {
               </div>
               <div className="flex items-center justify-between text-xs text-stone-500">
                 <span>{stage.percentage.toFixed(1)}% del pipeline</span>
-                <span>{formatCurrency(stage.value / stage.count)} promedio</span>
+                <span>{formatCurrency(stage.count > 0 ? stage.value / stage.count : 0)} promedio</span>
               </div>
             </div>
           ))}
