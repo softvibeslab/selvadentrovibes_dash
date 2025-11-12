@@ -16,7 +16,7 @@ export async function processQuery(query: string, user: User): Promise<QueryResu
   }
 
   if (lowerQuery.includes('lote') || lowerQuery.includes('disponible') || lowerQuery.includes('amenidad')) {
-    return { response: handlePropertyQuery(query), queryType: 'propiedades' };
+    return { response: handlePropertyQuery(), queryType: 'propiedades' };
   }
 
   if (lowerQuery.includes('venta') || lowerQuery.includes('revenue') || lowerQuery.includes('ingreso')) {
@@ -35,10 +35,10 @@ export async function processQuery(query: string, user: User): Promise<QueryResu
     return { response: handleMetricsQuery(user), queryType: 'métricas' };
   }
 
-  return { response: handleGeneralQuery(query), queryType: 'general' };
+  return { response: handleGeneralQuery(), queryType: 'general' };
 }
 
-function handlePropertyQuery(query: string): string {
+function handlePropertyQuery(): string {
   const info = SELVADENTRO_KNOWLEDGE;
 
   return `🏡 **Selvadentro Tulum**
@@ -289,8 +289,8 @@ Si necesitas más detalles sobre tu desempeño, pregunta por tus métricas o est
 ¡Felicitaciones a todo el equipo por el excelente trabajo este mes! 🎉`;
 }
 
-function handleGeneralQuery(query: string): string {
-  return `Entiendo tu pregunta sobre "${query}".
+function handleGeneralQuery(): string {
+  return `Entiendo tu pregunta.
 
 Puedo ayudarte con:
 

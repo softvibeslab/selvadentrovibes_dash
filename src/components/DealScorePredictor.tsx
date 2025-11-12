@@ -3,7 +3,6 @@ import { Target, Loader2, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { User } from '../lib/supabase';
 import {
   ContactOpportunity,
-  ContactStats,
   getContactOpportunities,
   getContactStats,
   calculateDealScore,

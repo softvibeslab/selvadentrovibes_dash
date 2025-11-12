@@ -57,7 +57,7 @@ export function PipelineView({ user }: PipelineViewProps) {
 
     try {
       const isAdmin = user.role === 'admin';
-      const userId = user.ghl_user_id;
+      const userId = user.ghl_user_id || undefined;
 
       // Obtener oportunidades
       const opportunitiesResponse = await callMCPTool(

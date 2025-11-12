@@ -1,0 +1,196 @@
+{
+  "name": "GHL Pipeline Processor",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "start-node",
+      "name": "When workflow is called",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "40b336dc-bbe5-44a5-9bdc-d41c3158d6fa",
+              "name": "GHL_MCP_ENDPOINT",
+              "value": "https://services.leadconnectorhq.com/mcp/",
+              "type": "string"
+            },
+            {
+              "id": "d64fd591-5f8e-42f9-b5d6-3acb8c4a09dc",
+              "name": "GHL_API_KEY",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2NhdGlvbl9pZCI6ImNyTjJJaEF1T0JBbDdEODMyNHlJIiwidmVyc2lvbiI6MSwiaWF0IjoxNzQ5OTY5Njg5MjkxLCJzdWIiOiJnRFhtNHJJQjZJbjhxa3Q1dXpKWSJ9.HKfmsDYjb30fxRu6n40R39ED-NEuoWYhJjKvGtxjeUg",
+              "type": "string"
+            },
+            {
+              "id": "44b300a9-f78f-4ad5-8371-c6dec6607c1d",
+              "name": "GHL_ACCESS_TOKEN",
+              "value": "pit-84d7687f-d43f-4434-9804-c671c669dd0f",
+              "type": "string"
+            },
+            {
+              "id": "459a70a3-ee49-4ec0-89ff-dc6b7825ec8e",
+              "name": "GHL_LOCATION_ID",
+              "value": "crN2IhAuOBAl7D8324yI",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [380, 300],
+      "id": "edit-fields-credentials",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.GHL_MCP_ENDPOINT }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json, text/event-stream"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.GHL_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $json.GHL_API_KEY }}"
+            },
+            {
+              "name": "locationId",
+              "value": "={{ $json.GHL_LOCATION_ID }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"opportunities_search-opportunity\",\n    \"arguments\": {\n      \"locationId\": \"{{ $json.GHL_LOCATION_ID }}\",\n      \"limit\": 1000\n    }\n  }\n}"
+      },
+      "id": "ghl-get-opportunities",
+      "name": "GHL - Get Opportunities",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [540, 250]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.GHL_MCP_ENDPOINT }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json, text/event-stream"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.GHL_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $json.GHL_API_KEY }}"
+            },
+            {
+              "name": "locationId",
+              "value": "={{ $json.GHL_LOCATION_ID }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 2,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"opportunities_get-pipelines\",\n    \"arguments\": {\n      \"query_locationId\": \"{{ $json.GHL_LOCATION_ID }}\"\n    }\n  }\n}"
+      },
+      "id": "ghl-get-pipelines",
+      "name": "GHL - Get Pipeline Config",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [540, 350]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse SSE response\nconst parseSSE = (text) => {\n  const lines = text.split('\\n');\n  for (const line of lines) {\n    if (line.startsWith('data: ')) {\n      const data = line.slice(6);\n      if (data && data !== '[DONE]') {\n        try {\n          return JSON.parse(data);\n        } catch (e) {\n          console.error('Error parsing SSE:', e);\n        }\n      }\n    }\n  }\n  return null;\n};\n\nlet opportunitiesData = $input.first().json;\nlet pipelinesData = $input.last().json;\n\nif (typeof opportunitiesData === 'string') {\n  opportunitiesData = parseSSE(opportunitiesData);\n}\nif (typeof pipelinesData === 'string') {\n  pipelinesData = parseSSE(pipelinesData);\n}\n\n// Extract nested result from tools/call response\nconst extractData = (response) => {\n  if (response?.result?.content) {\n    const content = response.result.content;\n    if (Array.isArray(content) && content[0]?.text) {\n      try {\n        const parsed = JSON.parse(content[0].text);\n        if (parsed.data) return parsed.data;\n      } catch (e) {}\n    }\n  }\n  return response?.result || response;\n};\n\nconst opportunitiesResult = extractData(opportunitiesData);\nconst pipelinesResult = extractData(pipelinesData);\n\nconst opportunities = opportunitiesResult?.opportunities || [];\nconst pipelines = pipelinesResult?.pipelines || [];\n\n// Filter active opportunities\nconst activeOpportunities = opportunities.filter(opp => \n  !['won', 'lost', 'abandoned'].includes(opp.status?.toLowerCase())\n);\n\n// Get pipeline stages\nconst pipelineStages = [];\nif (pipelines.length > 0) {\n  const mainPipeline = pipelines[0];\n  if (mainPipeline.stages) {\n    mainPipeline.stages.forEach(stage => {\n      pipelineStages.push({\n        id: stage.id,\n        name: stage.name,\n        order: stage.position || 0\n      });\n    });\n  }\n}\n\nif (pipelineStages.length === 0) {\n  pipelineStages.push(\n    { id: 'nuevo', name: 'Nuevo', order: 0 },\n    { id: 'contactado', name: 'Contactado', order: 1 },\n    { id: 'calificado', name: 'Calificado', order: 2 },\n    { id: 'propuesta', name: 'Propuesta', order: 3 },\n    { id: 'negociacion', name: 'Negociación', order: 4 },\n    { id: 'cierre', name: 'Cierre', order: 5 }\n  );\n}\n\n// Group opportunities by stage\nconst stageMap = {};\npipelineStages.forEach(stage => {\n  stageMap[stage.id] = {\n    id: stage.id,\n    name: stage.name,\n    order: stage.order,\n    deals: []\n  };\n});\n\nstageMap['undefined'] = {\n  id: 'undefined',\n  name: 'Sin Etapa',\n  order: 999,\n  deals: []\n};\n\nconst thirtyDaysAgo = new Date();\nthirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);\n\nactiveOpportunities.forEach(opp => {\n  const stageId = opp.pipelineStageId || opp.stageId || 'undefined';\n  const lastUpdate = new Date(opp.lastStatusChangeDate || opp.updatedAt || opp.createdAt);\n  const daysInStage = Math.floor((new Date() - lastUpdate) / (1000 * 60 * 60 * 24));\n  const isStale = lastUpdate < thirtyDaysAgo;\n  \n  const deal = {\n    id: opp.id,\n    contactName: opp.contactName || opp.contact?.name || 'Sin nombre',\n    contactId: opp.contactId || opp.contact?.id,\n    value: parseFloat(opp.monetaryValue) || 0,\n    createdAt: opp.createdAt,\n    lastActivity: opp.lastStatusChangeDate || opp.updatedAt,\n    daysInStage,\n    isStale,\n    probability: opp.pipelineStageProbability || 0,\n    status: opp.status,\n    source: opp.source,\n    assignedTo: opp.assignedTo\n  };\n  \n  if (stageMap[stageId]) {\n    stageMap[stageId].deals.push(deal);\n  } else {\n    stageMap['undefined'].deals.push(deal);\n  }\n});\n\nconst stages = Object.values(stageMap)\n  .filter(stage => stage.deals.length > 0 || stage.id !== 'undefined')\n  .sort((a, b) => a.order - b.order);\n\nconst totalValue = activeOpportunities.reduce((sum, opp) => \n  sum + (parseFloat(opp.monetaryValue) || 0), 0\n);\n\nconst totalDeals = activeOpportunities.length;\nconst avgDealValue = totalDeals > 0 ? Math.round(totalValue / totalDeals) : 0;\nconst staleDeals = activeOpportunities.filter(opp => {\n  const lastUpdate = new Date(opp.lastStatusChangeDate || opp.updatedAt);\n  return lastUpdate < thirtyDaysAgo;\n}).length;\n\nreturn {\n  json: {\n    stages,\n    summary: {\n      totalValue: Math.round(totalValue),\n      totalDeals,\n      avgDealValue,\n      staleDeals,\n      stalePercentage: totalDeals > 0 ? ((staleDeals / totalDeals) * 100).toFixed(1) : 0\n    },\n    _metadata: {\n      processedAt: new Date().toISOString(),\n      totalOpportunitiesProcessed: opportunities.length,\n      activeOpportunities: totalDeals,\n      stagesCount: stages.length\n    }\n  }\n};"
+      },
+      "id": "process-pipeline",
+      "name": "Process Pipeline Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 300]
+    }
+  ],
+  "connections": {
+    "When workflow is called": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "GHL - Get Opportunities",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GHL - Get Pipeline Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL - Get Opportunities": {
+      "main": [
+        [
+          {
+            "node": "Process Pipeline Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL - Get Pipeline Config": {
+      "main": [
+        [
+          {
+            "node": "Process Pipeline Data",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": []
+}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Flame, Loader2, Mail, Phone, TrendingUp, ExternalLink } from 'lucide-react';
+import { Flame, Loader2, Mail, TrendingUp, ExternalLink } from 'lucide-react';
 import { User } from '../lib/supabase';
 import { HotLead, detectHotLeads } from '../lib/automation-service';
 
@@ -20,12 +20,6 @@ export function HotLeadDetector({ user }: HotLeadDetectorProps) {
     const leads = await detectHotLeads(user);
     setHotLeads(leads);
     setLoading(false);
-  };
-
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return 'from-red-600 to-orange-700';
-    if (score >= 60) return 'from-orange-600 to-amber-700';
-    return 'from-amber-600 to-yellow-700';
   };
 
   const getScoreBg = (score: number) => {

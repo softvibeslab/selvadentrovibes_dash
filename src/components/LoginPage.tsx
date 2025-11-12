@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Mail, Lock } from 'lucide-react';
+import { Mail } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface LoginPageProps {

@@ -154,7 +154,7 @@ export function ContactTimeline({ contactId, user }: ContactTimelineProps) {
         </div>
       ) : (
         <div className="space-y-4">
-          {filteredActivities.map((activity, index) => {
+          {filteredActivities.map((activity) => {
             const Icon = getActivityIcon(activity.type);
             const colorClass = getActivityColor(activity.type);
 

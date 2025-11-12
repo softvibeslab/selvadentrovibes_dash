@@ -15,7 +15,7 @@ const WEBHOOK_PATH = '/webhook/selvadentro';
 interface BaseParams {
   userId: string;
   role: 'admin' | 'broker' | 'user';
-  [key: string]: string;
+  [key: string]: string | undefined;
 }
 
 /**
@@ -46,7 +46,7 @@ class N8NClient {
   /**
    * Construye la URL completa para un endpoint
    */
-  private buildUrl(endpoint: string, params: Record<string, string>): string {
+  private buildUrl(endpoint: string, params: Record<string, string | undefined>): string {
     const url = new URL(this.webhookPath, this.baseUrl);
     url.searchParams.set('endpoint', endpoint);
 
@@ -60,11 +60,20 @@ class N8NClient {
   }
 
   /**
+   * Parsea respuesta SSE anidada del MCP API - Versión simplificada
+   */
+  private parseNestedResponse(rawData: any): any {
+    // Por ahora, retornar los datos tal cual
+    // Los workflows N8N ya deberían estar retornando JSON limpio
+    return rawData;
+  }
+
+  /**
    * Realiza una petición GET al webhook de N8N
    */
   private async request<T = any>(
     endpoint: string,
-    params: Record<string, string>
+    params: Record<string, string | undefined>
   ): Promise<T> {
     const url = this.buildUrl(endpoint, params);
 
@@ -80,8 +89,9 @@ class N8NClient {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const data = await response.json() as T;
-      return data;
+      const rawData = await response.json();
+      const parsedData = this.parseNestedResponse(rawData);
+      return parsedData as T;
     } catch (error) {
       console.error(`N8N API Error [${endpoint}]:`, error);
       throw error;
@@ -114,7 +124,10 @@ class N8NClient {
    */
   async getContacts(params: BaseParams & { search?: string }) {
     const { search, ...baseParams } = params;
-    const requestParams: Record<string, string> = { ...baseParams };
+    const requestParams: Record<string, string | undefined> = {
+      userId: baseParams.userId,
+      role: baseParams.role
+    };
 
     if (search && search.trim()) {
       requestParams.search = search;

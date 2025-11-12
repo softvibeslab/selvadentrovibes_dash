@@ -8,7 +8,6 @@ import {
   Mail,
   Calendar,
   TrendingDown,
-  X,
 } from 'lucide-react';
 import { User as UserType } from '../lib/supabase';
 import { callMCPTool } from '../lib/ghl-mcp';
@@ -46,7 +45,7 @@ export function DealsAtRisk({ user }: DealsAtRiskProps) {
 
     try {
       const isAdmin = user.role === 'admin';
-      const userId = user.ghl_user_id;
+      const userId = user.ghl_user_id || undefined;
 
       // Obtener oportunidades
       const opportunitiesResponse = await callMCPTool(

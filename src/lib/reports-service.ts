@@ -219,7 +219,7 @@ async function fetchPipelineData(user: User) {
       params.assignedTo = user.user_id;
     }
 
-    const response = await callMCPTool('opportunities_search-opportunity', params);
+    const response = await callMCPTool('opportunities_search-opportunity', params, user.role, user.user_id);
 
     if (!response || typeof response !== 'object') {
       return [];
@@ -235,7 +235,6 @@ async function fetchPipelineData(user: User) {
     const stageMap = new Map<string, { count: number; value: number }>();
 
     opportunities.forEach((opp: any) => {
-      const stage = opp.pipelineStageId || opp.pipeline_stage_id || 'unknown';
       const stageName = opp.stageName || opp.stage_name || 'Sin Etapa';
       const value = parseFloat(opp.monetaryValue || opp.monetary_value || '0');
 
@@ -259,7 +258,7 @@ async function fetchPipelineData(user: User) {
   }
 }
 
-async function fetchRecentActivities(user: User) {
+async function fetchRecentActivities(_user: User) {
   // In a real implementation, this would fetch from tasks/notes API
   // For now, return mock data structure
   return [
@@ -292,7 +291,7 @@ async function fetchTopDeals(user: User) {
       params.assignedTo = user.user_id;
     }
 
-    const response = await callMCPTool('opportunities_search-opportunity', params);
+    const response = await callMCPTool('opportunities_search-opportunity', params, user.role, user.user_id);
 
     if (!response || typeof response !== 'object') {
       return [];
@@ -328,7 +327,7 @@ async function fetchContactStats(user: User) {
       limit: 1000,
     };
 
-    const response = await callMCPTool('contacts_get-contacts', params);
+    const response = await callMCPTool('contacts_get-contacts', params, user.role, user.user_id);
 
     if (!response || typeof response !== 'object') {
       return { total: 0, active: 0, newThisWeek: 0 };

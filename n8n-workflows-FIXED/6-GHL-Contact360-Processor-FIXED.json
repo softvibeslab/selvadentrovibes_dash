@@ -1,0 +1,308 @@
+{
+  "name": "GHL Contact360 Processor",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "start-node",
+      "name": "When workflow is called",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "40b336dc-bbe5-44a5-9bdc-d41c3158d6fa",
+              "name": "GHL_MCP_ENDPOINT",
+              "value": "https://services.leadconnectorhq.com/mcp/",
+              "type": "string"
+            },
+            {
+              "id": "d64fd591-5f8e-42f9-b5d6-3acb8c4a09dc",
+              "name": "GHL_API_KEY",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2NhdGlvbl9pZCI6ImNyTjJJaEF1T0JBbDdEODMyNHlJIiwidmVyc2lvbiI6MSwiaWF0IjoxNzQ5OTY5Njg5MjkxLCJzdWIiOiJnRFhtNHJJQjZJbjhxa3Q1dXpKWSJ9.HKfmsDYjb30fxRu6n40R39ED-NEuoWYhJjKvGtxjeUg",
+              "type": "string"
+            },
+            {
+              "id": "44b300a9-f78f-4ad5-8371-c6dec6607c1d",
+              "name": "GHL_ACCESS_TOKEN",
+              "value": "pit-84d7687f-d43f-4434-9804-c671c669dd0f",
+              "type": "string"
+            },
+            {
+              "id": "459a70a3-ee49-4ec0-89ff-dc6b7825ec8e",
+              "name": " GHL_LOCATION_ID",
+              "value": "crN2IhAuOBAl7D8324yI",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [380, 300],
+      "id": "edit-fields-credentials",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.GHL_MCP_ENDPOINT }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json, text/event-stream"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.GHL_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $json.GHL_API_KEY }}"
+            },
+            {
+              "name": "locationId",
+              "value": "={{ $json[' GHL_LOCATION_ID'] }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"contacts/get-contact-by-id\",\n  \"params\": {\n    \"contactId\": \"{{ $('When workflow is called').item.json.contactId }}\"\n  }\n}"
+      },
+      "id": "ghl-get-contact",
+      "name": "GHL - Get Contact Details",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [540, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.GHL_MCP_ENDPOINT }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json, text/event-stream"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.GHL_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $json.GHL_API_KEY }}"
+            },
+            {
+              "name": "locationId",
+              "value": "={{ $json[' GHL_LOCATION_ID'] }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 2,\n  \"method\": \"opportunities/search\",\n  \"params\": {\n    \"contactId\": \"{{ $('When workflow is called').item.json.contactId }}\"\n  }\n}"
+      },
+      "id": "ghl-get-opportunities",
+      "name": "GHL - Get Opportunities",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [540, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.GHL_MCP_ENDPOINT }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json, text/event-stream"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.GHL_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $json.GHL_API_KEY }}"
+            },
+            {
+              "name": "locationId",
+              "value": "={{ $json[' GHL_LOCATION_ID'] }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 3,\n  \"method\": \"notes/get-notes\",\n  \"params\": {\n    \"contactId\": \"{{ $('When workflow is called').item.json.contactId }}\"\n  }\n}"
+      },
+      "id": "ghl-get-notes",
+      "name": "GHL - Get Notes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [540, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.GHL_MCP_ENDPOINT }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json, text/event-stream"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.GHL_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $json.GHL_API_KEY }}"
+            },
+            {
+              "name": "locationId",
+              "value": "={{ $json[' GHL_LOCATION_ID'] }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 4,\n  \"method\": \"tasks/get-tasks\",\n  \"params\": {\n    \"contactId\": \"{{ $('When workflow is called').item.json.contactId }}\"\n  }\n}"
+      },
+      "id": "ghl-get-tasks",
+      "name": "GHL - Get Tasks",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [540, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse SSE\nconst parseSSE = (text) => {\n  const lines = text.split('\\n');\n  for (const line of lines) {\n    if (line.startsWith('data: ')) {\n      const data = line.slice(6);\n      if (data && data !== '[DONE]') {\n        try {\n          return JSON.parse(data);\n        } catch (e) {}\n      }\n    }\n  }\n  return null;\n};\n\n// Get all inputs\nconst inputs = $input.all();\nlet contactData = inputs[0]?.json;\nlet opportunitiesData = inputs[1]?.json;\nlet notesData = inputs[2]?.json;\nlet tasksData = inputs[3]?.json;\n\n// Parse SSE if needed\nif (typeof contactData === 'string') contactData = parseSSE(contactData);\nif (typeof opportunitiesData === 'string') opportunitiesData = parseSSE(opportunitiesData);\nif (typeof notesData === 'string') notesData = parseSSE(notesData);\nif (typeof tasksData === 'string') tasksData = parseSSE(tasksData);\n\n// Extract data\nconst contact = contactData?.result?.contact || {};\nconst opportunities = opportunitiesData?.result?.opportunities || [];\nconst notes = notesData?.result?.notes || [];\nconst tasks = tasksData?.result?.tasks || [];\n\n// Process opportunities\nconst processedOpportunities = opportunities.map(opp => ({\n  id: opp.id,\n  name: opp.name || 'Sin nombre',\n  value: parseFloat(opp.monetaryValue) || 0,\n  stage: opp.pipelineStage || opp.stageName || 'Sin etapa',\n  probability: opp.pipelineStageProbability || 0,\n  status: opp.status,\n  createdAt: opp.createdAt,\n  updatedAt: opp.updatedAt,\n  lastStatusChangeDate: opp.lastStatusChangeDate\n}));\n\n// Build timeline (last 50 activities)\nconst timeline = [];\n\n// Add notes to timeline\nnotes.forEach(note => {\n  timeline.push({\n    id: `note_${note.id}`,\n    type: 'note',\n    title: 'Nota agregada',\n    description: note.body || note.text || 'Sin descripción',\n    date: note.dateAdded || note.createdAt,\n    createdBy: note.userId\n  });\n});\n\n// Add tasks to timeline\ntasks.forEach(task => {\n  timeline.push({\n    id: `task_${task.id}`,\n    type: 'task',\n    title: task.title || 'Tarea',\n    description: task.body || task.description || '',\n    date: task.dueDate || task.createdAt,\n    completed: task.completed || task.status === 'completed',\n    createdBy: task.assignedTo\n  });\n});\n\n// Add opportunity changes to timeline\nopportunities.forEach(opp => {\n  if (opp.createdAt) {\n    timeline.push({\n      id: `opp_created_${opp.id}`,\n      type: 'opportunity',\n      title: `Oportunidad creada: ${opp.name || 'Sin nombre'}`,\n      description: `Valor: $${(opp.monetaryValue || 0).toLocaleString()}`,\n      date: opp.createdAt\n    });\n  }\n  if (opp.lastStatusChangeDate) {\n    timeline.push({\n      id: `opp_updated_${opp.id}`,\n      type: 'opportunity',\n      title: `Oportunidad actualizada: ${opp.name || 'Sin nombre'}`,\n      description: `Nueva etapa: ${opp.pipelineStage || 'Sin etapa'}`,\n      date: opp.lastStatusChangeDate\n    });\n  }\n});\n\n// Sort timeline by date (most recent first)\ntimeline.sort((a, b) => new Date(b.date) - new Date(a.date));\n\n// Limit to last 50\nconst limitedTimeline = timeline.slice(0, 50);\n\n// Calculate activity heatmap (last 30 days)\nconst thirtyDaysAgo = new Date();\nthirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);\n\nconst heatmapData = {};\nfor (let i = 0; i < 30; i++) {\n  const date = new Date();\n  date.setDate(date.getDate() - i);\n  const dateKey = date.toISOString().split('T')[0];\n  heatmapData[dateKey] = 0;\n}\n\ntimeline.forEach(activity => {\n  const activityDate = new Date(activity.date);\n  if (activityDate >= thirtyDaysAgo) {\n    const dateKey = activityDate.toISOString().split('T')[0];\n    if (heatmapData[dateKey] !== undefined) {\n      heatmapData[dateKey]++;\n    }\n  }\n});\n\nconst heatmap = Object.entries(heatmapData).map(([date, count]) => ({\n  date,\n  count\n})).sort((a, b) => new Date(a.date) - new Date(b.date));\n\n// Calculate stats\nconst totalInteractions = timeline.length;\nconst tasksCompleted = tasks.filter(t => t.completed || t.status === 'completed').length;\nconst tasksPending = tasks.filter(t => !t.completed && t.status !== 'completed').length;\n\nconst stats = {\n  totalInteractions,\n  notesCount: notes.length,\n  tasksTotal: tasks.length,\n  tasksCompleted,\n  tasksPending,\n  opportunitiesCount: opportunities.length,\n  opportunitiesValue: processedOpportunities.reduce((sum, o) => sum + o.value, 0)\n};\n\n// Calculate deal score (simplified)\nconst calculateDealScore = () => {\n  let score = 50; // Base score\n  const factors = [];\n  \n  // Has active opportunities\n  const activeOpps = opportunities.filter(o => \n    !['won', 'lost', 'abandoned'].includes(o.status?.toLowerCase())\n  );\n  if (activeOpps.length > 0) {\n    score += 20;\n    factors.push({ name: 'Active Opportunities', value: 20, weight: 0.20 });\n  }\n  \n  // Recent activity\n  const recentActivities = timeline.filter(a => {\n    const activityDate = new Date(a.date);\n    const sevenDaysAgo = new Date();\n    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);\n    return activityDate >= sevenDaysAgo;\n  });\n  if (recentActivities.length >= 3) {\n    score += 15;\n    factors.push({ name: 'Recent Activity', value: 15, weight: 0.15 });\n  }\n  \n  // High value opportunities\n  const highValueOpp = activeOpps.some(o => o.value > 200000);\n  if (highValueOpp) {\n    score += 10;\n    factors.push({ name: 'High Value Deal', value: 10, weight: 0.10 });\n  }\n  \n  // Contact quality\n  if (contact.email && contact.phone) {\n    score += 5;\n    factors.push({ name: 'Complete Contact Info', value: 5, weight: 0.05 });\n  }\n  \n  return {\n    score: Math.min(score, 100),\n    factors\n  };\n};\n\nconst dealScore = calculateDealScore();\n\nreturn {\n  json: {\n    contact: {\n      id: contact.id,\n      name: contact.name || `${contact.firstName || ''} ${contact.lastName || ''}`.trim(),\n      firstName: contact.firstName,\n      lastName: contact.lastName,\n      email: contact.email,\n      phone: contact.phone,\n      tags: contact.tags || [],\n      source: contact.source,\n      dateAdded: contact.dateAdded || contact.createdAt,\n      lastActivity: contact.lastActivityAt,\n      assignedTo: contact.assignedTo,\n      customFields: contact.customFields || {}\n    },\n    opportunities: processedOpportunities,\n    timeline: limitedTimeline,\n    stats,\n    heatmap: {\n      data: heatmap\n    },\n    dealScore,\n    _metadata: {\n      processedAt: new Date().toISOString(),\n      contactId: contact.id\n    }\n  }\n};"
+      },
+      "id": "process-contact360",
+      "name": "Process Contact 360 Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 350]
+    }
+  ],
+  "connections": {
+    "When workflow is called": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "GHL - Get Contact Details",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GHL - Get Opportunities",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GHL - Get Notes",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GHL - Get Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL - Get Contact Details": {
+      "main": [
+        [
+          {
+            "node": "Process Contact 360 Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL - Get Opportunities": {
+      "main": [
+        [
+          {
+            "node": "Process Contact 360 Data",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "GHL - Get Notes": {
+      "main": [
+        [
+          {
+            "node": "Process Contact 360 Data",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "GHL - Get Tasks": {
+      "main": [
+        [
+          {
+            "node": "Process Contact 360 Data",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": []
+}

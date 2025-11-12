@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileText, Calendar, History, Settings } from 'lucide-react';
+import { FileText, Calendar, History } from 'lucide-react';
 import { User } from '../lib/supabase';
 import { ReportGenerator } from './ReportGenerator';
 import { ReportScheduler } from './ReportScheduler';

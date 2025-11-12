@@ -1,0 +1,196 @@
+{
+  "name": "GHL Metrics Processor",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "start-node",
+      "name": "When workflow is called",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "40b336dc-bbe5-44a5-9bdc-d41c3158d6fa",
+              "name": "GHL_MCP_ENDPOINT",
+              "value": "https://services.leadconnectorhq.com/mcp/",
+              "type": "string"
+            },
+            {
+              "id": "d64fd591-5f8e-42f9-b5d6-3acb8c4a09dc",
+              "name": "GHL_API_KEY",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2NhdGlvbl9pZCI6ImNyTjJJaEF1T0JBbDdEODMyNHlJIiwidmVyc2lvbiI6MSwiaWF0IjoxNzQ5OTY5Njg5MjkxLCJzdWIiOiJnRFhtNHJJQjZJbjhxa3Q1dXpKWSJ9.HKfmsDYjb30fxRu6n40R39ED-NEuoWYhJjKvGtxjeUg",
+              "type": "string"
+            },
+            {
+              "id": "44b300a9-f78f-4ad5-8371-c6dec6607c1d",
+              "name": "GHL_ACCESS_TOKEN",
+              "value": "pit-84d7687f-d43f-4434-9804-c671c669dd0f",
+              "type": "string"
+            },
+            {
+              "id": "459a70a3-ee49-4ec0-89ff-dc6b7825ec8e",
+              "name": "GHL_LOCATION_ID",
+              "value": "crN2IhAuOBAl7D8324yI",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [380, 300],
+      "id": "edit-fields-credentials",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.GHL_MCP_ENDPOINT }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json, text/event-stream"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.GHL_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $json.GHL_API_KEY }}"
+            },
+            {
+              "name": "locationId",
+              "value": "={{ $json.GHL_LOCATION_ID }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"contacts_get-contacts\",\n    \"arguments\": {\n      \"query_locationId\": \"{{ $json.GHL_LOCATION_ID }}\",\n      \"query_limit\": 1000\n    }\n  }\n}"
+      },
+      "id": "ghl-get-contacts",
+      "name": "GHL - Get Contacts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [540, 250]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.GHL_MCP_ENDPOINT }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json, text/event-stream"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.GHL_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $json.GHL_API_KEY }}"
+            },
+            {
+              "name": "locationId",
+              "value": "={{ $json.GHL_LOCATION_ID }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 2,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"opportunities_search-opportunity\",\n    \"arguments\": {\n      \"locationId\": \"{{ $json.GHL_LOCATION_ID }}\",\n      \"limit\": 1000\n    }\n  }\n}"
+      },
+      "id": "ghl-get-opportunities",
+      "name": "GHL - Get Opportunities",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [540, 350]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse SSE response if needed\nconst parseSSE = (text) => {\n  const lines = text.split('\\n');\n  for (const line of lines) {\n    if (line.startsWith('data: ')) {\n      const data = line.slice(6);\n      if (data && data !== '[DONE]') {\n        try {\n          return JSON.parse(data);\n        } catch (e) {\n          console.error('Error parsing SSE data:', e);\n        }\n      }\n    }\n  }\n  return null;\n};\n\nlet contactsData = $input.first().json;\nlet opportunitiesData = $input.last().json;\n\n// Handle SSE format\nif (typeof contactsData === 'string') {\n  contactsData = parseSSE(contactsData);\n}\nif (typeof opportunitiesData === 'string') {\n  opportunitiesData = parseSSE(opportunitiesData);\n}\n\n// Extract nested result from tools/call response\nconst extractData = (response) => {\n  if (response?.result?.content) {\n    // tools/call format - nested JSON in text field\n    const content = response.result.content;\n    if (Array.isArray(content) && content[0]?.text) {\n      try {\n        const parsed = JSON.parse(content[0].text);\n        if (parsed.data) return parsed.data;\n      } catch (e) {}\n    }\n  }\n  return response?.result || response;\n};\n\nconst contactsResult = extractData(contactsData);\nconst opportunitiesResult = extractData(opportunitiesData);\n\nconst contacts = contactsResult?.contacts || [];\nconst opportunities = opportunitiesResult?.opportunities || [];\n\n// Calculate metrics\nconst leads = contacts.length;\nconst activeOpportunities = opportunities.filter(o => \n  !['won', 'lost', 'abandoned'].includes(o.status?.toLowerCase())\n);\n\nconst totalOpportunities = activeOpportunities.length;\nconst revenue = activeOpportunities.reduce((sum, opp) => \n  sum + (parseFloat(opp.monetaryValue) || 0), 0\n);\nconst conversion = leads > 0 ? ((totalOpportunities / leads) * 100).toFixed(1) : 0;\n\n// Pipeline calculations\nconst pipelineTotal = revenue;\nconst dealAverage = totalOpportunities > 0 \n  ? Math.round(revenue / totalOpportunities) \n  : 0;\n\n// At-risk deals (>30 days without activity)\nconst thirtyDaysAgo = new Date();\nthirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);\n\nconst atRisk = activeOpportunities.filter(opp => {\n  const lastUpdate = new Date(opp.lastStatusChangeDate || opp.updatedAt);\n  return lastUpdate < thirtyDaysAgo;\n}).length;\n\n// Pipeline by stage\nconst stageMap = {};\nactiveOpportunities.forEach(opp => {\n  const stage = opp.pipelineStage || opp.stageName || 'Sin etapa';\n  if (!stageMap[stage]) {\n    stageMap[stage] = {\n      stage,\n      count: 0,\n      value: 0\n    };\n  }\n  stageMap[stage].count++;\n  stageMap[stage].value += parseFloat(opp.monetaryValue) || 0;\n});\n\nconst pipelineByStage = Object.values(stageMap).map(s => ({\n  ...s,\n  percentage: totalOpportunities > 0 \n    ? ((s.count / totalOpportunities) * 100).toFixed(1) \n    : 0\n}));\n\n// Generate AI insights\nconst insights = [];\nif (atRisk > 0) {\n  insights.push(`${atRisk} deals llevan más de 30 días sin actividad`);\n}\nif (dealAverage > 0 && dealAverage < 150000) {\n  insights.push(`El ticket promedio de $${dealAverage.toLocaleString()} está por debajo del objetivo`);\n}\nif (conversion < 20) {\n  insights.push(`Tasa de conversión del ${conversion}% puede mejorarse`);\n}\nif (insights.length === 0) {\n  insights.push('Pipeline saludable, mantén el ritmo');\n}\n\n// Build response\nreturn {\n  json: {\n    leads,\n    opportunities: totalOpportunities,\n    revenue: Math.round(revenue),\n    conversion: parseFloat(conversion),\n    pipelineTotal: Math.round(pipelineTotal),\n    dealAverage,\n    atRisk,\n    totalDeals: totalOpportunities,\n    pipelineByStage,\n    insights,\n    _metadata: {\n      processedAt: new Date().toISOString(),\n      totalContactsProcessed: leads,\n      totalOpportunitiesProcessed: opportunities.length\n    }\n  }\n};"
+      },
+      "id": "calculate-metrics",
+      "name": "Calculate Metrics",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 300]
+    }
+  ],
+  "connections": {
+    "When workflow is called": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "GHL - Get Contacts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GHL - Get Opportunities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL - Get Contacts": {
+      "main": [
+        [
+          {
+            "node": "Calculate Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL - Get Opportunities": {
+      "main": [
+        [
+          {
+            "node": "Calculate Metrics",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": []
+}

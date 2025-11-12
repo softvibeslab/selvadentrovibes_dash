@@ -1,0 +1,196 @@
+{
+  "name": "GHL FollowUps Processor",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "start-node",
+      "name": "When workflow is called",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "40b336dc-bbe5-44a5-9bdc-d41c3158d6fa",
+              "name": "GHL_MCP_ENDPOINT",
+              "value": "https://services.leadconnectorhq.com/mcp/",
+              "type": "string"
+            },
+            {
+              "id": "d64fd591-5f8e-42f9-b5d6-3acb8c4a09dc",
+              "name": "GHL_API_KEY",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2NhdGlvbl9pZCI6ImNyTjJJaEF1T0JBbDdEODMyNHlJIiwidmVyc2lvbiI6MSwiaWF0IjoxNzQ5OTY5Njg5MjkxLCJzdWIiOiJnRFhtNHJJQjZJbjhxa3Q1dXpKWSJ9.HKfmsDYjb30fxRu6n40R39ED-NEuoWYhJjKvGtxjeUg",
+              "type": "string"
+            },
+            {
+              "id": "44b300a9-f78f-4ad5-8371-c6dec6607c1d",
+              "name": "GHL_ACCESS_TOKEN",
+              "value": "pit-84d7687f-d43f-4434-9804-c671c669dd0f",
+              "type": "string"
+            },
+            {
+              "id": "459a70a3-ee49-4ec0-89ff-dc6b7825ec8e",
+              "name": "GHL_LOCATION_ID",
+              "value": "crN2IhAuOBAl7D8324yI",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [380, 300],
+      "id": "edit-fields-credentials",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.GHL_MCP_ENDPOINT }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json, text/event-stream"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.GHL_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $json.GHL_API_KEY }}"
+            },
+            {
+              "name": "locationId",
+              "value": "={{ $json.GHL_LOCATION_ID }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"contacts_get-contacts\",\n    \"arguments\": {\n      \"query_locationId\": \"{{ $json.GHL_LOCATION_ID }}\",\n      \"query_limit\": 1000\n    }\n  }\n}"
+      },
+      "id": "ghl-get-contacts",
+      "name": "GHL - Get Contacts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [540, 250]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.GHL_MCP_ENDPOINT }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json, text/event-stream"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.GHL_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $json.GHL_API_KEY }}"
+            },
+            {
+              "name": "locationId",
+              "value": "={{ $json.GHL_LOCATION_ID }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 2,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"opportunities_search-opportunity\",\n    \"arguments\": {\n      \"locationId\": \"{{ $json.GHL_LOCATION_ID }}\",\n      \"limit\": 1000\n    }\n  }\n}"
+      },
+      "id": "ghl-get-opportunities",
+      "name": "GHL - Get Opportunities",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [540, 350]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse SSE\nconst parseSSE = (text) => {\n  const lines = text.split('\\n');\n  for (const line of lines) {\n    if (line.startsWith('data: ')) {\n      const data = line.slice(6);\n      if (data && data !== '[DONE]') {\n        try {\n          return JSON.parse(data);\n        } catch (e) {}\n      }\n    }\n  }\n  return null;\n};\n\nlet contactsData = $input.first().json;\nlet opportunitiesData = $input.last().json;\n\nif (typeof contactsData === 'string') contactsData = parseSSE(contactsData);\nif (typeof opportunitiesData === 'string') opportunitiesData = parseSSE(opportunitiesData);\n\n// Extract nested result from tools/call response\nconst extractData = (response) => {\n  if (response?.result?.content) {\n    const content = response.result.content;\n    if (Array.isArray(content) && content[0]?.text) {\n      try {\n        const parsed = JSON.parse(content[0].text);\n        if (parsed.data) return parsed.data;\n      } catch (e) {}\n    }\n  }\n  return response?.result || response;\n};\n\nconst contactsResult = extractData(contactsData);\nconst opportunitiesResult = extractData(opportunitiesData);\n\nconst contacts = contactsResult?.contacts || [];\nconst opportunities = opportunitiesResult?.opportunities || [];\n\n// Create map of opportunities by contact\nconst oppsByContact = {};\nopportunities.forEach(opp => {\n  const contactId = opp.contactId || opp.contact_id;\n  if (!oppsByContact[contactId]) {\n    oppsByContact[contactId] = [];\n  }\n  oppsByContact[contactId].push(opp);\n});\n\n// Calculate follow-up suggestions\nconst suggestions = [];\n\ncontacts.forEach(contact => {\n  const contactOpps = oppsByContact[contact.id] || [];\n  \n  // Filter active opportunities\n  const activeOpps = contactOpps.filter(opp => \n    !['won', 'lost', 'abandoned'].includes(opp.status?.toLowerCase())\n  );\n  \n  if (activeOpps.length === 0) return; // Skip if no active opportunities\n  \n  // Calculate days without contact\n  const lastActivity = new Date(contact.lastActivityAt || contact.dateAdded);\n  const now = new Date();\n  const daysWithoutContact = Math.floor((now - lastActivity) / (1000 * 60 * 60 * 24));\n  \n  if (daysWithoutContact < 3) return; // Skip recent contacts\n  \n  // Calculate total value\n  const totalValue = activeOpps.reduce((sum, opp) => sum + (parseFloat(opp.monetaryValue) || 0), 0);\n  const highestValueOpp = activeOpps.reduce((max, opp) => {\n    const value = parseFloat(opp.monetaryValue) || 0;\n    return value > max.value ? { value, opp } : max;\n  }, { value: 0, opp: null }).opp;\n  \n  // Determine priority\n  let priority = 'low';\n  let reason = '';\n  let suggestedAction = '';\n  \n  if (daysWithoutContact >= 14) {\n    priority = 'high';\n    reason = `Sin contacto por ${daysWithoutContact} días`;\n    suggestedAction = 'Llamada urgente de reactivación';\n  } else if (daysWithoutContact >= 7) {\n    priority = 'medium';\n    reason = `${daysWithoutContact} días sin actividad`;\n    suggestedAction = 'Enviar email de seguimiento personalizado';\n  } else if (totalValue > 300000) {\n    priority = 'high';\n    reason = `Deal de alto valor ($${totalValue.toLocaleString()})`;\n    suggestedAction = 'Agendar reunión de avance';\n  } else {\n    priority = 'low';\n    reason = `${daysWithoutContact} días sin contacto`;\n    suggestedAction = 'Enviar mensaje de WhatsApp';\n  }\n  \n  // Enhance priority if in advanced stage\n  const advancedStages = ['propuesta', 'negociacion', 'cierre', 'proposal', 'negotiation', 'closing'];\n  const hasAdvancedOpp = activeOpps.some(opp => {\n    const stage = (opp.pipelineStage || opp.stageName || '').toLowerCase();\n    return advancedStages.some(s => stage.includes(s));\n  });\n  \n  if (hasAdvancedOpp && priority !== 'high') {\n    priority = 'medium';\n    reason += ' - Deal en etapa avanzada';\n  }\n  \n  suggestions.push({\n    contactId: contact.id,\n    name: contact.name || `${contact.firstName || ''} ${contact.lastName || ''}`.trim(),\n    email: contact.email,\n    phone: contact.phone,\n    priority,\n    daysWithoutContact,\n    lastInteraction: contact.lastActivityAt || contact.dateAdded,\n    reason,\n    suggestedAction,\n    dealValue: Math.round(totalValue),\n    opportunitiesCount: activeOpps.length,\n    stage: highestValueOpp?.pipelineStage || highestValueOpp?.stageName || 'Sin etapa',\n    opportunities: activeOpps.map(opp => ({\n      id: opp.id,\n      name: opp.name,\n      value: parseFloat(opp.monetaryValue) || 0,\n      stage: opp.pipelineStage || opp.stageName || 'Sin etapa'\n    }))\n  });\n});\n\n// Sort by priority and days without contact\nconst priorityOrder = { high: 0, medium: 1, low: 2 };\nsuggestions.sort((a, b) => {\n  if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {\n    return priorityOrder[a.priority] - priorityOrder[b.priority];\n  }\n  return b.daysWithoutContact - a.daysWithoutContact;\n});\n\nreturn {\n  json: {\n    suggestions,\n    summary: {\n      total: suggestions.length,\n      high: suggestions.filter(s => s.priority === 'high').length,\n      medium: suggestions.filter(s => s.priority === 'medium').length,\n      low: suggestions.filter(s => s.priority === 'low').length,\n      totalPotentialValue: suggestions.reduce((sum, s) => sum + s.dealValue, 0)\n    },\n    _metadata: {\n      processedAt: new Date().toISOString(),\n      contactsAnalyzed: contacts.length,\n      opportunitiesAnalyzed: opportunities.length\n    }\n  }\n};"
+      },
+      "id": "generate-followup-suggestions",
+      "name": "Generate Follow-up Suggestions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 300]
+    }
+  ],
+  "connections": {
+    "When workflow is called": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "GHL - Get Contacts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GHL - Get Opportunities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL - Get Contacts": {
+      "main": [
+        [
+          {
+            "node": "Generate Follow-up Suggestions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL - Get Opportunities": {
+      "main": [
+        [
+          {
+            "node": "Generate Follow-up Suggestions",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": []
+}

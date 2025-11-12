@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { UserPlus, Tag, Globe, DollarSign, Check, X } from 'lucide-react';
+import { UserPlus, Tag, Globe, DollarSign } from 'lucide-react';
 import { User } from '../lib/supabase';
 import { AssignmentRule, getSavedAssignmentRules } from '../lib/automation-service';
 
@@ -7,7 +7,7 @@ interface AutoAssignmentPanelProps {
   user: User;
 }
 
-export function AutoAssignmentPanel({ user }: AutoAssignmentPanelProps) {
+export function AutoAssignmentPanel({ }: AutoAssignmentPanelProps) {
   const [rules, setRules] = useState<AssignmentRule[]>(getSavedAssignmentRules());
 
   const toggleRule = (ruleId: string) => {
@@ -63,7 +63,7 @@ export function AutoAssignmentPanel({ user }: AutoAssignmentPanelProps) {
                   </span>
                 </div>
                 <p className="text-sm text-stone-400">
-                  Asignar a: <span className="text-emerald-400 font-semibold">{rule.assignToName}</span>
+                  Asignar a: <span className="text-emerald-400 font-semibold">{rule.assignTo}</span>
                 </p>
               </div>
 
@@ -86,12 +86,12 @@ export function AutoAssignmentPanel({ user }: AutoAssignmentPanelProps) {
             <div className="space-y-2">
               <p className="text-xs font-semibold text-stone-400 mb-2">Criterios:</p>
 
-              {rule.criteria.tags && rule.criteria.tags.length > 0 && (
+              {rule.conditions.tags && rule.conditions.tags.length > 0 && (
                 <div className="flex items-center gap-2">
                   <Tag className="w-4 h-4 text-purple-400 flex-shrink-0" />
                   <span className="text-sm text-stone-300">Tags:</span>
                   <div className="flex flex-wrap gap-1">
-                    {rule.criteria.tags.map((tag, index) => (
+                    {rule.conditions.tags.map((tag: string, index: number) => (
                       <span
                         key={index}
                         className="text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full"
@@ -103,12 +103,12 @@ export function AutoAssignmentPanel({ user }: AutoAssignmentPanelProps) {
                 </div>
               )}
 
-              {rule.criteria.source && rule.criteria.source.length > 0 && (
+              {rule.conditions.source && rule.conditions.source.length > 0 && (
                 <div className="flex items-center gap-2">
                   <Globe className="w-4 h-4 text-blue-400 flex-shrink-0" />
                   <span className="text-sm text-stone-300">Fuente:</span>
                   <div className="flex flex-wrap gap-1">
-                    {rule.criteria.source.map((source, index) => (
+                    {rule.conditions.source.map((source: string, index: number) => (
                       <span
                         key={index}
                         className="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full"
@@ -120,11 +120,11 @@ export function AutoAssignmentPanel({ user }: AutoAssignmentPanelProps) {
                 </div>
               )}
 
-              {(rule.criteria.valueMin || rule.criteria.valueMax) && (
+              {(rule.conditions.leadValue?.min || rule.conditions.leadValue?.max) && (
                 <div className="flex items-center gap-2">
                   <DollarSign className="w-4 h-4 text-emerald-400 flex-shrink-0" />
                   <span className="text-sm text-stone-300">
-                    Valor: ${rule.criteria.valueMin || 0} - ${rule.criteria.valueMax || '∞'}
+                    Valor: ${rule.conditions.leadValue?.min || 0} - ${rule.conditions.leadValue?.max || '∞'}
                   </span>
                 </div>
               )}
@@ -133,7 +133,7 @@ export function AutoAssignmentPanel({ user }: AutoAssignmentPanelProps) {
             {/* Example */}
             <div className="mt-4 pt-4 border-t border-stone-700/30">
               <p className="text-xs text-stone-500 italic">
-                Ejemplo: Un lead con tag "VIP" se asignará automáticamente a {rule.assignToName}
+                Ejemplo: Un lead con tag "VIP" se asignará automáticamente a {rule.assignTo}
               </p>
             </div>
           </div>

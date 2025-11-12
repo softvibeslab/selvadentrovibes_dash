@@ -2,8 +2,6 @@ import {
   ExternalLink,
   Search,
   Calendar,
-  LayoutDashboard,
-  GitBranch,
   ArrowRight,
 } from 'lucide-react';
 

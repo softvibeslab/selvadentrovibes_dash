@@ -63,14 +63,6 @@ export function ContactDetailView({ contactId, user, onBack }: ContactDetailView
     }
   };
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('es-MX', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -207,7 +199,7 @@ export function ContactDetailView({ contactId, user, onBack }: ContactDetailView
         </div>
 
         <div className="mt-4 pt-4 border-t border-stone-700/30 text-sm text-stone-400">
-          <span>Cliente desde: {formatDate(contact.dateAdded)}</span>
+          <span>Cliente desde: {contact.dateAdded ? new Date(contact.dateAdded).toLocaleDateString('es-MX') : 'N/A'}</span>
           {contact.source && (
             <span className="ml-4">• Fuente: {contact.source}</span>
           )}

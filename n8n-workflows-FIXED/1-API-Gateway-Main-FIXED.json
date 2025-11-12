@@ -1,0 +1,328 @@
+{
+  "name": "Selvadentro API Gateway",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "selvadentro",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "cee496cf-7ff6-490b-bc97-fb36607ca7e1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [-736, 160],
+      "webhookId": "0f749f59-b4ec-4891-959f-07fd9a5ba9f5"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "81caea87-96b0-49c1-aeec-ca2988fb7682",
+              "name": "WORKFLOW_ID_METRICS",
+              "value": "Oqg9eTzA7Ee5OYyg",
+              "type": "string"
+            },
+            {
+              "id": "e12eae03-23d0-4215-891a-21de1ae4ff45",
+              "name": "WORKFLOW_ID_PIPELINE",
+              "value": "2SRqPp6XOwBtyAep",
+              "type": "string"
+            },
+            {
+              "id": "0d60fe65-147f-4aea-be0a-ff4dd1e7da02",
+              "name": "WORKFLOW_ID_CONTACTS",
+              "value": "GUt6LnasyRo8p2PH",
+              "type": "string"
+            },
+            {
+              "id": "b45dd124-70fb-4d8c-8987-2451034f9973",
+              "name": "WORKFLOW_ID_CONTACT360",
+              "value": "LbMoEZrHRiojjc4V",
+              "type": "string"
+            },
+            {
+              "id": "9447c9b8-a2e3-4fef-9710-84275c7a074d",
+              "name": "WORKFLOW_ID_HOTLEADS",
+              "value": "kQJ6TiRdm6KIJzWB",
+              "type": "string"
+            },
+            {
+              "id": "33df117c-2b2b-4cec-b3a4-7743ed9de473",
+              "name": "WORKFLOW_ID_FOLLOWUPS",
+              "value": "k3LHqYhgRuPcflGX",
+              "type": "string"
+            },
+            {
+              "id": "query-endpoint",
+              "name": "endpoint",
+              "value": "={{ $json.query.endpoint }}",
+              "type": "string"
+            },
+            {
+              "id": "query-userId",
+              "name": "userId",
+              "value": "={{ $json.query.userId }}",
+              "type": "string"
+            },
+            {
+              "id": "query-role",
+              "name": "role",
+              "value": "={{ $json.query.role }}",
+              "type": "string"
+            },
+            {
+              "id": "query-search",
+              "name": "search",
+              "value": "={{ $json.query.search || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "query-contactId",
+              "name": "contactId",
+              "value": "={{ $json.query.contactId || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-544, 0],
+      "id": "eaef9090-bd45-42d5-b0e0-86f491484984",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.endpoint }}",
+              "value2": "metrics"
+            }
+          ]
+        }
+      },
+      "id": "3cb68c5c-d63c-4e2f-86fb-da3e81802247",
+      "name": "IF Metrics",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [-96, -144]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.endpoint }}",
+              "value2": "pipeline"
+            }
+          ]
+        }
+      },
+      "id": "c3989a68-50c2-4979-b354-c9ade92d5d83",
+      "name": "IF Pipeline",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [-112, 16]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.endpoint }}",
+              "value2": "contacts"
+            }
+          ]
+        }
+      },
+      "id": "49bfec3f-5bae-4fa1-bdc8-b261c6c0a01d",
+      "name": "IF Contacts",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [-16, 144]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.endpoint }}",
+              "value2": "contact360"
+            }
+          ]
+        }
+      },
+      "id": "eb5964ce-9e2d-48cc-855e-b46ec27ddedd",
+      "name": "IF Contact360",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [80, 320]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.endpoint }}",
+              "value2": "hot-leads"
+            }
+          ]
+        }
+      },
+      "id": "cbd81a0b-d492-4e0a-b2fa-d4ffc8db09cf",
+      "name": "IF HotLeads",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [-128, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.endpoint }}",
+              "value2": "follow-ups"
+            }
+          ]
+        }
+      },
+      "id": "71b7ccdd-03d9-42ed-945f-52978eee4669",
+      "name": "IF FollowUps",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [-32, 560]
+    },
+    {
+      "parameters": {
+        "workflowId": "={{ $json.WORKFLOW_ID_METRICS }}",
+        "options": {}
+      },
+      "id": "6a77d3dc-e2a0-4738-a745-a73d009de32a",
+      "name": "Execute Metrics Workflow",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [240, -112]
+    },
+    {
+      "parameters": {
+        "workflowId": "={{ $json.WORKFLOW_ID_PIPELINE }}",
+        "options": {}
+      },
+      "id": "b2f3e1b5-b011-4412-aac9-859a669980e8",
+      "name": "Execute Pipeline Workflow",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [272, 48]
+    },
+    {
+      "parameters": {
+        "workflowId": "={{ $json.WORKFLOW_ID_CONTACTS }}",
+        "options": {}
+      },
+      "id": "cb0b3c94-f0bf-4d65-aadc-c8c2d56c8ac9",
+      "name": "Execute Contacts Workflow",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [240, 192]
+    },
+    {
+      "parameters": {
+        "workflowId": "={{ $json.WORKFLOW_ID_CONTACT360 }}",
+        "options": {}
+      },
+      "id": "922b7ae8-f4bc-4eed-a690-d99e839cc232",
+      "name": "Execute Contact360 Workflow",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [272, 352]
+    },
+    {
+      "parameters": {
+        "workflowId": "={{ $json.WORKFLOW_ID_HOTLEADS }}",
+        "options": {}
+      },
+      "id": "b68d4eb9-853e-47ba-8aa8-1593f1fbed3e",
+      "name": "Execute HotLeads Workflow",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [288, 480]
+    },
+    {
+      "parameters": {
+        "workflowId": "={{ $json.WORKFLOW_ID_FOLLOWUPS }}",
+        "options": {}
+      },
+      "id": "17518913-cd2f-441d-8dd8-c385da0b0980",
+      "name": "Execute FollowUps Workflow",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [320, 624]
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "id": "bad8c000-3a4d-44e3-bc8d-171b2e43c5ff",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [640, 16]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{"node": "Edit Fields", "type": "main", "index": 0}]]
+    },
+    "Edit Fields": {
+      "main": [[
+        {"node": "IF Metrics", "type": "main", "index": 0},
+        {"node": "IF Pipeline", "type": "main", "index": 0},
+        {"node": "IF Contacts", "type": "main", "index": 0},
+        {"node": "IF Contact360", "type": "main", "index": 0},
+        {"node": "IF HotLeads", "type": "main", "index": 0},
+        {"node": "IF FollowUps", "type": "main", "index": 0}
+      ]]
+    },
+    "IF Metrics": {
+      "main": [[{"node": "Execute Metrics Workflow", "type": "main", "index": 0}]]
+    },
+    "IF Pipeline": {
+      "main": [[{"node": "Execute Pipeline Workflow", "type": "main", "index": 0}]]
+    },
+    "IF Contacts": {
+      "main": [[{"node": "Execute Contacts Workflow", "type": "main", "index": 0}]]
+    },
+    "IF Contact360": {
+      "main": [[{"node": "Execute Contact360 Workflow", "type": "main", "index": 0}]]
+    },
+    "IF HotLeads": {
+      "main": [[{"node": "Execute HotLeads Workflow", "type": "main", "index": 0}]]
+    },
+    "IF FollowUps": {
+      "main": [[{"node": "Execute FollowUps Workflow", "type": "main", "index": 0}]]
+    },
+    "Execute Metrics Workflow": {
+      "main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]
+    },
+    "Execute Pipeline Workflow": {
+      "main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]
+    },
+    "Execute Contacts Workflow": {
+      "main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]
+    },
+    "Execute Contact360 Workflow": {
+      "main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]
+    },
+    "Execute HotLeads Workflow": {
+      "main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]
+    },
+    "Execute FollowUps Workflow": {
+      "main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]
+    }
+  }
+}

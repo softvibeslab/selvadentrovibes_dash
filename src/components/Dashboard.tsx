@@ -20,6 +20,12 @@ interface DashboardProps {
 export function Dashboard({ user, onLogout }: DashboardProps) {
   const [activeView, setActiveView] = useState<'chat' | 'history' | 'graphics' | 'executive' | 'pipeline' | 'contacts' | 'automations' | 'reports'>('executive');
 
+  const handleNavigate = (view: string) => {
+    if (['chat', 'history', 'graphics', 'executive', 'pipeline', 'contacts', 'automations', 'reports'].includes(view)) {
+      setActiveView(view as typeof activeView);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-stone-900 via-neutral-800 to-stone-900">
       <div className="flex h-screen">
@@ -46,7 +52,7 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
           </header>
 
           <main className="flex-1 overflow-hidden">
-            {activeView === 'chat' && <ChatInterface user={user} onNavigate={setActiveView} />}
+            {activeView === 'chat' && <ChatInterface user={user} onNavigate={handleNavigate} />}
             {activeView === 'history' && <HistoryView user={user} />}
             {activeView === 'graphics' && <GraphicsView user={user} />}
             {activeView === 'executive' && <ExecutiveDashboard user={user} />}
