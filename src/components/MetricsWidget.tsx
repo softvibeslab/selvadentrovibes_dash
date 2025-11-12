@@ -31,7 +31,10 @@ export function MetricsWidget({ user }: MetricsWidgetProps) {
   }, [user]);
 
   // Formatear revenue según el tamaño
-  const formatRevenue = (value: number) => {
+  const formatRevenue = (value: number | undefined) => {
+    if (value === undefined || value === null || isNaN(value) || !isFinite(value)) {
+      return '$0';
+    }
     if (value >= 1000000) {
       return `$${(value / 1000000).toFixed(1)}M`;
     } else if (value >= 1000) {

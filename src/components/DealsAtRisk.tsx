@@ -101,7 +101,10 @@ export function DealsAtRisk({ user }: DealsAtRiskProps) {
     }
   };
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number | undefined) => {
+    if (value === undefined || value === null || isNaN(value) || !isFinite(value)) {
+      return '$0';
+    }
     if (value >= 1000000) {
       return `$${(value / 1000000).toFixed(1)}M`;
     } else if (value >= 1000) {

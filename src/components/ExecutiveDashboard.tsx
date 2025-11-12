@@ -289,11 +289,12 @@ function generateInsights(metrics: DetailedMetrics) {
 
   // Insight sobre tamaño promedio de deal
   if (metrics.avgDealSize > 50000) {
+    const avgInK = metrics.avgDealSize / 1000;
     insights.push({
       icon: '💎',
-      text: `Excelente tamaño promedio de deal ($${(metrics.avgDealSize / 1000).toFixed(0)}K). Enfócate en calidad sobre cantidad.`,
+      text: `Excelente tamaño promedio de deal ($${avgInK.toFixed(0)}K). Enfócate en calidad sobre cantidad.`,
     });
-  } else if (metrics.avgDealSize < 10000) {
+  } else if (metrics.avgDealSize < 10000 && metrics.avgDealSize > 0) {
     insights.push({
       icon: '📈',
       text: 'Considera prospectar cuentas más grandes para aumentar el ticket promedio.',
@@ -302,9 +303,10 @@ function generateInsights(metrics: DetailedMetrics) {
 
   // Insight sobre pipeline total
   if (metrics.totalPipelineValue > 1000000) {
+    const pipelineInM = metrics.totalPipelineValue / 1000000;
     insights.push({
       icon: '🎯',
-      text: `Pipeline saludable de $${(metrics.totalPipelineValue / 1000000).toFixed(1)}M. Mantén el momentum con follow-ups consistentes.`,
+      text: `Pipeline saludable de $${pipelineInM.toFixed(1)}M. Mantén el momentum con follow-ups consistentes.`,
     });
   }
 
@@ -314,7 +316,7 @@ function generateInsights(metrics: DetailedMetrics) {
     const totalDeals = stages.reduce((sum, stage) => sum + stage.count, 0);
     const negotiationDeals = stages.find(s => s.count > 0)?.count || 0;
 
-    if (negotiationDeals / totalDeals > 0.3) {
+    if (totalDeals > 0 && negotiationDeals / totalDeals > 0.3) {
       insights.push({
         icon: '🔥',
         text: 'Alto porcentaje en negociación. Enfócate en cerrar estas oportunidades en los próximos 7 días.',

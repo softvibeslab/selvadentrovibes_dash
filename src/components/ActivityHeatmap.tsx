@@ -126,7 +126,7 @@ export function ActivityHeatmap({ contactId, user }: ActivityHeatmapProps) {
           </div>
           <div className="text-center">
             <p className="text-2xl font-bold text-blue-400">
-              {(totalActivities / 30).toFixed(1)}
+              {totalActivities > 0 ? (totalActivities / 30).toFixed(1) : '0.0'}
             </p>
             <p className="text-xs text-stone-400">Promedio Diario</p>
           </div>

@@ -50,7 +50,10 @@ export function ContactDetailView({ contactId, user, onBack }: ContactDetailView
     setLoading(false);
   };
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number | undefined) => {
+    if (value === undefined || value === null || isNaN(value) || !isFinite(value)) {
+      return '$0';
+    }
     if (value >= 1000000) {
       return `$${(value / 1000000).toFixed(1)}M`;
     } else if (value >= 1000) {
@@ -107,7 +110,7 @@ export function ContactDetailView({ contactId, user, onBack }: ContactDetailView
     {
       icon: TrendingUp,
       label: 'Win Rate',
-      value: `${stats.winRate.toFixed(0)}%`,
+      value: `${stats.winRate !== undefined && !isNaN(stats.winRate) ? stats.winRate.toFixed(0) : '0'}%`,
       color: 'from-blue-600 to-cyan-700',
       bgColor: 'bg-blue-500/10',
       borderColor: 'border-blue-500/20',
@@ -298,7 +301,7 @@ export function ContactDetailView({ contactId, user, onBack }: ContactDetailView
             </div>
             <div className="flex items-center justify-between">
               <span className="text-stone-300 text-sm">Win Rate</span>
-              <span className="text-emerald-400 font-bold">{stats.winRate.toFixed(0)}%</span>
+              <span className="text-emerald-400 font-bold">{stats.winRate !== undefined && !isNaN(stats.winRate) ? stats.winRate.toFixed(0) : '0'}%</span>
             </div>
           </div>
         </div>
